@@ -555,6 +555,7 @@ button:hover {
 #join-error.hidden { display: none; }
 
 #join-full { margin: 16px 0; text-align: center; }
+#join-full.hidden { display: none; }
 #join-full-msg { color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
 
 #btn-new-campaign {
