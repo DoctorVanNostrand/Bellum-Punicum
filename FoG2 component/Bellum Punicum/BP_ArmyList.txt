@@ -1,0 +1,501 @@
+REPLACE
+
+// BELLUM PUNICUM - Custom Army Lists for 2nd Punic War Strategic Overlay
+// Note: Always add new army lists at the end only.
+// Quality tiers use custom BP_ units from Squads.csv with equalized costs.
+// Ally contingents (BP_CISALPINE_GAUL, BP_ITALIAN_DEFECTORS) are pre-committed
+// in the strategic layer and released at winter (every 8 turns).
+
+[BP_POTLUCK]
+NAME IDS_ARMY_BP_POTLUCK
+YEARS 0 4500
+LONGMIN -10000
+LONGMAX 200
+LATMIN -200
+LATMAX 10000
+INTRO IDS_ARMY_INTRO_POTLUCK
+SORTNAME AAAAAAAA
+
+// -----------------------------------------------------------------------
+// CARTHAGINIAN ARMY LISTS - 2nd Punic War (218-201 BC)
+// Base: LL_CARTHAGINIAN flavored. Mercenary contingents already baked in
+// as optional units. "Hiring mercenaries" = larger battle point budget.
+// -----------------------------------------------------------------------
+
+// LEVY - Citizen militia (Poeni_Foot) dominant, raw Libyan levies
+[BP_CARTHAGE_LEVY]
+SIDEID 8
+NAME IDS_ARMY_BP_CARTHAGE_LEVY
+YEARS 2782 2799
+DEPLOYMENT Hellenistic
+LONGMIN -10
+LONGMAX 20
+LATMIN 30
+LATMAX 44
+INTRO IDS_ARMY_INTRO_CARTHAGINIAN
+SORTNAME Carthaginian Levy
+MAPSET Medi
+ALLIES1 BP_CISALPINE_GAUL
+ALLIES2 BP_ITALIAN_DEFECTORS
+
+UNIT_0 BP_African_Levy
+// fixed quantity for 1200 point army
+MIN_0 2
+// total (fixed + selection) quantity for 1200 point army
+MAX_0 6
+
+UNIT_1 Poeni_Foot
+MIN_1 3
+MAX_1 12
+
+UNIT_2 Light_Javelins
+MIN_2 2
+MAX_2 8
+
+UNIT_3 LH_Javelin
+MIN_3 2
+MAX_3 5
+
+UNIT_4 Noble_Cavalry_Prot
+MIN_4 0
+MAX_4 2
+
+UNIT_5 Balearic_Slingers
+MIN_5 0
+MAX_5 1
+
+UNIT_6 Spanish_Scutarii
+MIN_6 0
+MAX_6 4
+
+UNIT_7 Warband
+MIN_7 0
+MAX_7 3
+
+UNIT_8 Elephants
+MIN_8 0
+MAX_8 2
+
+// SEASONED - Experienced Libyan core with fuller mercenary complement
+[BP_CARTHAGE_SEASONED]
+SIDEID 8
+NAME IDS_ARMY_BP_CARTHAGE_SEASONED
+YEARS 2782 2799
+DEPLOYMENT Hellenistic
+LONGMIN -10
+LONGMAX 20
+LATMIN 30
+LATMAX 44
+INTRO IDS_ARMY_INTRO_CARTHAGINIAN
+SORTNAME Carthaginian Seasoned
+MAPSET Medi
+ALLIES1 BP_CISALPINE_GAUL
+ALLIES2 BP_ITALIAN_DEFECTORS
+
+UNIT_0 BP_African_Seasoned
+MIN_0 3
+MAX_0 8
+
+UNIT_1 Poeni_Foot
+MIN_1 0
+MAX_1 6
+
+UNIT_2 Light_Javelins
+MIN_2 2
+MAX_2 8
+
+UNIT_3 LH_Javelin
+MIN_3 2
+MAX_3 8
+
+UNIT_4 Noble_Cavalry_Prot
+MIN_4 1
+MAX_4 4
+
+UNIT_5 Noble_Cavalry_Arm
+MIN_5 0
+MAX_5 1
+
+UNIT_6 Balearic_Slingers
+MIN_6 0
+MAX_6 2
+
+UNIT_7 Spanish_Scutarii
+MIN_7 0
+MAX_7 6
+
+UNIT_8 Warband
+MIN_8 0
+MAX_8 4
+
+UNIT_9 Elephants
+MIN_9 0
+MAX_9 3
+
+// VETERAN - Battle-hardened force, heavy cavalry suite unlocked
+[BP_CARTHAGE_VETERAN]
+SIDEID 8
+NAME IDS_ARMY_BP_CARTHAGE_VETERAN
+YEARS 2782 2799
+DEPLOYMENT Hellenistic
+LONGMIN -10
+LONGMAX 20
+LATMIN 30
+LATMAX 44
+INTRO IDS_ARMY_INTRO_CARTHAGINIAN
+SORTNAME Carthaginian Veteran
+MAPSET Medi
+ALLIES1 BP_CISALPINE_GAUL
+ALLIES2 BP_ITALIAN_DEFECTORS
+
+UNIT_0 BP_African_Veteran
+MIN_0 3
+MAX_0 8
+
+UNIT_1 Light_Javelins
+MIN_1 2
+MAX_1 8
+
+UNIT_2 LH_Javelin
+MIN_2 2
+MAX_2 8
+
+UNIT_3 Noble_Cavalry_Prot
+MIN_3 1
+MAX_3 4
+
+UNIT_4 Noble_Cavalry_Arm
+MIN_4 0
+MAX_4 2
+
+UNIT_5 Vet_Arm_Cavalry
+MIN_5 0
+MAX_5 2
+
+UNIT_6 Balearic_Slingers
+MIN_6 0
+MAX_6 2
+
+UNIT_7 Spanish_Scutarii
+MIN_7 0
+MAX_7 6
+
+UNIT_8 Warband
+MIN_8 0
+MAX_8 5
+
+UNIT_9 Elephants
+MIN_9 0
+MAX_9 4
+
+UNIT_10 Merc_Hoplites
+MIN_10 0
+MAX_10 3
+
+// ELITE - Hannibal's finest; full cavalry suite, peak African infantry
+[BP_CARTHAGE_ELITE]
+SIDEID 8
+NAME IDS_ARMY_BP_CARTHAGE_ELITE
+YEARS 2782 2799
+DEPLOYMENT Hellenistic
+LONGMIN -10
+LONGMAX 20
+LATMIN 30
+LATMAX 44
+INTRO IDS_ARMY_INTRO_CARTHAGINIAN
+SORTNAME Carthaginian Elite
+MAPSET Medi
+ALLIES1 BP_CISALPINE_GAUL
+ALLIES2 BP_ITALIAN_DEFECTORS
+
+UNIT_0 BP_African_Elite
+MIN_0 3
+MAX_0 8
+
+UNIT_1 Light_Javelins
+MIN_1 2
+MAX_1 8
+
+UNIT_2 LH_Javelin
+MIN_2 2
+MAX_2 8
+
+UNIT_3 Noble_Cavalry_Prot
+MIN_3 1
+MAX_3 4
+
+UNIT_4 Noble_Cavalry_Arm
+MIN_4 0
+MAX_4 3
+
+UNIT_5 Vet_Arm_Cavalry
+MIN_5 0
+MAX_5 3
+
+UNIT_6 Balearic_Slingers
+MIN_6 0
+MAX_6 2
+
+UNIT_7 Spanish_Scutarii
+MIN_7 0
+MAX_7 8
+
+UNIT_8 Warband
+MIN_8 0
+MAX_8 6
+
+UNIT_9 Elephants
+MIN_9 0
+MAX_9 5
+
+UNIT_10 Merc_Hoplites
+MIN_10 0
+MAX_10 3
+
+// -----------------------------------------------------------------------
+// ROMAN ARMY LISTS - 2nd Punic War (218-201 BC)
+// No ally list attachment. "Calling on allies" = +200 point budget.
+// Quality tier degradation reflects strategic strain from Italian losses.
+// -----------------------------------------------------------------------
+
+// LEVY - Emergency conscripts; Raw legionaries, no Triarii
+[BP_ROME_LEVY]
+SIDEID 32
+NAME IDS_ARMY_BP_ROME_LEVY
+YEARS 2782 2799
+DEPLOYMENT Roman
+LONGMIN -10
+LONGMAX 20
+LATMIN 28
+LATMAX 45
+INTRO IDS_ARMY_INTRO_ROMAN1
+SORTNAME Roman Levy
+MAPSET Medi
+
+UNIT_0 BP_Legionary_Levy
+MIN_0 6
+MAX_0 16
+
+UNIT_1 Velites
+MIN_1 4
+MAX_1 14
+
+UNIT_2 Italian_Foot
+MIN_2 0
+MAX_2 10
+
+UNIT_3 Grk_arm_cav
+MIN_3 1
+MAX_3 4
+
+UNIT_4 Light_Slingers
+MIN_4 0
+MAX_4 4
+
+UNIT_5 LH_Javelin
+MIN_5 0
+MAX_5 2
+
+UNIT_6 Hillmen
+MIN_6 0
+MAX_6 2
+
+// SEASONED - Standard professional legions; Triarii available in small numbers
+[BP_ROME_SEASONED]
+SIDEID 32
+NAME IDS_ARMY_BP_ROME_SEASONED
+YEARS 2782 2799
+DEPLOYMENT Roman
+LONGMIN -10
+LONGMAX 20
+LATMIN 28
+LATMAX 45
+INTRO IDS_ARMY_INTRO_ROMAN1
+SORTNAME Roman Seasoned
+MAPSET Medi
+
+UNIT_0 BP_Legionary_Seasoned
+MIN_0 6
+MAX_0 14
+
+UNIT_1 Velites
+MIN_1 4
+MAX_1 14
+
+UNIT_2 Italian_Foot
+MIN_2 0
+MAX_2 10
+
+UNIT_3 Grk_arm_cav
+MIN_3 1
+MAX_3 4
+
+UNIT_4 Triarii
+MIN_4 0
+MAX_4 4
+
+UNIT_5 Light_Slingers
+MIN_5 0
+MAX_5 4
+
+UNIT_6 LH_Javelin
+MIN_6 0
+MAX_6 2
+
+UNIT_7 Hillmen
+MIN_7 0
+MAX_7 2
+
+// VETERAN - Battle-hardened legions; meaningful Triarii reserve
+[BP_ROME_VETERAN]
+SIDEID 32
+NAME IDS_ARMY_BP_ROME_VETERAN
+YEARS 2782 2799
+DEPLOYMENT Roman
+LONGMIN -10
+LONGMAX 20
+LATMIN 28
+LATMAX 45
+INTRO IDS_ARMY_INTRO_ROMAN1
+SORTNAME Roman Veteran
+MAPSET Medi
+
+UNIT_0 BP_Legionary_Veteran
+MIN_0 6
+MAX_0 14
+
+UNIT_1 Velites
+MIN_1 4
+MAX_1 14
+
+UNIT_2 Italian_Foot
+MIN_2 0
+MAX_2 10
+
+UNIT_3 Grk_arm_cav
+MIN_3 1
+MAX_3 4
+
+UNIT_4 Triarii
+MIN_4 2
+MAX_4 7
+
+UNIT_5 Light_Slingers
+MIN_5 0
+MAX_5 4
+
+UNIT_6 LH_Javelin
+MIN_6 0
+MAX_6 2
+
+UNIT_7 Hillmen
+MIN_7 0
+MAX_7 2
+
+// ELITE - Scipio's veterans; Elite Triarii reserve, Superior Hastati
+[BP_ROME_ELITE]
+SIDEID 32
+NAME IDS_ARMY_BP_ROME_ELITE
+YEARS 2782 2799
+DEPLOYMENT Roman
+LONGMIN -10
+LONGMAX 20
+LATMIN 28
+LATMAX 45
+INTRO IDS_ARMY_INTRO_ROMAN1
+SORTNAME Roman Elite
+MAPSET Medi
+
+UNIT_0 BP_Legionary_Veteran
+MIN_0 4
+MAX_0 12
+
+UNIT_1 Velites
+MIN_1 4
+MAX_1 14
+
+UNIT_2 Italian_Foot
+MIN_2 0
+MAX_2 8
+
+UNIT_3 Grk_arm_cav
+MIN_3 1
+MAX_3 4
+
+UNIT_4 BP_Triarii_Elite
+MIN_4 3
+MAX_4 10
+
+UNIT_5 Light_Slingers
+MIN_5 0
+MAX_5 4
+
+UNIT_6 LH_Javelin
+MIN_6 0
+MAX_6 4
+
+UNIT_7 Hillmen
+MIN_7 0
+MAX_7 2
+
+// -----------------------------------------------------------------------
+// ALLY LISTS
+// Pre-committed via strategic action; released at winter.
+// Both come with +200 point budget bonus (agreed in strategic layer).
+// -----------------------------------------------------------------------
+
+// Cisalpine Gallic contingent - available when Cisalpine Gaul controlled
+[BP_CISALPINE_GAUL]
+SIDEID 10
+NAME IDS_ARMY_BP_CISALPINE_GAUL
+YEARS 2782 2799
+DEPLOYMENT Hellenistic
+LONGMIN -5
+LONGMAX 15
+LATMIN 43
+LATMAX 48
+INTRO IDS_ARMY_INTRO_GALLIC
+SORTNAME Cisalpine Gaul
+MAPSET Medi
+
+UNIT_0 Warband
+MIN_0 4
+MAX_0 12
+
+UNIT_1 Superior_Warband
+MIN_1 0
+MAX_1 6
+
+UNIT_2 Ligurians
+MIN_2 0
+MAX_2 4
+
+// Italian Defectors contingent - available when Italian regions flip to Carthage
+[BP_ITALIAN_DEFECTORS]
+SIDEID 53
+NAME IDS_ARMY_BP_ITALIAN_DEFECTORS
+YEARS 2782 2799
+DEPLOYMENT Hellenistic
+LONGMIN 12
+LONGMAX 18
+LATMIN 38
+LATMAX 44
+INTRO IDS_ARMY_INTRO_CAMPANIAN
+SORTNAME Italian Defectors
+MAPSET Medi
+
+UNIT_0 Italian_Foot
+MIN_0 4
+MAX_0 12
+
+UNIT_1 Samnite_Foot
+MIN_1 0
+MAX_1 6
+
+UNIT_2 Bruttian_Veterans
+MIN_2 0
+MAX_2 4
+
+UNIT_3 Vet_Arm_Cavalry
+MIN_3 0
+MAX_3 3

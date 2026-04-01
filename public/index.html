@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bellum Punicum — Campaign Map</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Header -->
+  <header id="top-bar">
+    <div id="title-block">
+      <span id="game-title">BELLUM PUNICUM</span>
+      <span id="game-subtitle">218 BC Campaign</span>
+    </div>
+    <div id="phase-block">
+      <span class="label">Year</span><span id="hdr-year">—</span>
+      <span class="label">Turn</span><span id="hdr-turn">—</span>
+      <span class="label">Phase</span><span id="hdr-phase">—</span>
+    </div>
+    <div id="header-actions">
+      <button id="btn-new-game">New Campaign (218 BC)</button>
+      <button id="btn-refresh">Refresh</button>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <div id="main-layout">
+
+    <!-- Left sidebar: Rome -->
+    <aside id="sidebar-rome" class="sidebar side-rome">
+      <h2>ROME</h2>
+      <div class="stat-block">
+        <div class="stat"><span class="label">Resources</span><span id="rome-res">—</span></div>
+        <div class="stat"><span class="label">Initiative</span><span id="rome-init">—</span></div>
+        <div class="stat"><span class="label">VP</span><span id="rome-vp">—</span></div>
+        <div class="stat"><span class="label">Naval</span><span id="rome-naval">—</span></div>
+      </div>
+      <h3>Armies</h3>
+      <div id="rome-armies"></div>
+    </aside>
+
+    <!-- Map -->
+    <main id="map-container">
+
+      <!-- SVG map loaded dynamically by app.js -->
+      <div id="svg-host"></div>
+
+      <!-- Map legend -->
+      <div id="map-legend">
+        <div class="legend-item"><span class="swatch swatch-rome"></span>Rome</div>
+        <div class="legend-item"><span class="swatch swatch-carthage"></span>Carthage</div>
+        <div class="legend-item"><span class="swatch swatch-neutral"></span>Neutral</div>
+        <div class="legend-item"><span class="swatch swatch-sea"></span>Sea route</div>
+      </div>
+    </main>
+
+    <!-- Right sidebar: Carthage -->
+    <aside id="sidebar-carthage" class="sidebar side-carthage">
+      <h2>CARTHAGE</h2>
+      <div class="stat-block">
+        <div class="stat"><span class="label">Resources</span><span id="cart-res">—</span></div>
+        <div class="stat"><span class="label">Initiative</span><span id="cart-init">—</span></div>
+        <div class="stat"><span class="label">VP</span><span id="cart-vp">—</span></div>
+        <div class="stat"><span class="label">Naval</span><span id="cart-naval">—</span></div>
+      </div>
+      <h3>Armies</h3>
+      <div id="carthage-armies"></div>
+    </aside>
+
+  </div><!-- /main-layout -->
+
+  <!-- Detail panel (appears when region clicked) -->
+  <div id="detail-panel" class="hidden">
+    <div id="detail-header">
+      <span id="detail-name">—</span>
+      <button id="detail-close">✕</button>
+    </div>
+    <div id="detail-body">
+      <div class="detail-row"><span class="label">Theater</span><span id="detail-theater">—</span></div>
+      <div class="detail-row"><span class="label">Controller</span><span id="detail-controller">—</span></div>
+      <div class="detail-row"><span class="label">Loyalty</span><span id="detail-loyalty">—</span></div>
+      <div class="detail-row"><span class="label">Defected</span><span id="detail-defected">—</span></div>
+      <h4>Strategic Points</h4>
+      <div id="detail-sp-list"></div>
+      <h4>Armies Present</h4>
+      <div id="detail-armies-list"></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ── Join screen — shown when no valid session token is present ── -->
+<div id="join-screen" class="hidden">
+  <div id="join-card">
+    <div id="join-title">BELLUM PUNICUM</div>
+    <div id="join-subtitle">218 BC — Second Punic War</div>
+    <p id="join-prompt">Choose your side to enter the campaign:</p>
+    <div id="join-no-campaign" class="hidden">
+      <p id="join-no-campaign-msg">No active campaign found.</p>
+      <button id="btn-start-campaign" class="btn-start-campaign">Start New Campaign (218 BC)</button>
+    </div>
+    <div id="join-buttons">
+      <button id="join-rome"     class="join-btn join-btn-rome">
+        <span class="join-btn-label">SPQR</span>
+        <span class="join-btn-sub">Play as Rome</span>
+      </button>
+      <button id="join-carthage" class="join-btn join-btn-carthage">
+        <span class="join-btn-label">CARTHAGO</span>
+        <span class="join-btn-sub">Play as Carthage</span>
+      </button>
+    </div>
+    <p id="join-error" class="hidden"></p>
+    <div id="join-reset-row">
+      <button id="btn-reset-game">Reset &amp; Clear Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Waiting modal — shown after orders submitted, opponent pending ── -->
+<div id="waiting-banner" class="hidden">
+  <div id="waiting-inner">
+    <div class="waiting-title">✓ Orders Submitted</div>
+    Waiting for opponent…
+    <div class="waiting-sub">Click below once your opponent has submitted their orders.</div>
+    <button id="waiting-refresh" style="margin-top:16px">↻ Refresh</button>
+  </div>
+</div>
+
+<!-- ── Notification modal — replaces browser alert() ── -->
+<div id="notify-modal" class="hidden">
+  <div id="notify-inner">
+    <div id="notify-title"></div>
+    <div id="notify-body"></div>
+    <button id="notify-close">OK</button>
+  </div>
+</div>
+
+<!-- ── Confirm modal — replaces browser confirm() ── -->
+<div id="confirm-modal" class="hidden">
+  <div id="confirm-inner">
+    <div id="confirm-title"></div>
+    <div id="confirm-body"></div>
+    <div class="confirm-buttons">
+      <button id="confirm-ok">Confirm</button>
+      <button id="confirm-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Game Over modal ── -->
+<div id="gameover-modal" class="hidden">
+  <div id="gameover-inner">
+    <div id="gameover-title"></div>
+    <div id="gameover-subtitle"></div>
+    <div id="gameover-body"></div>
+    <button id="gameover-close">View Final State</button>
+  </div>
+</div>
+
+<!-- ── Resolution summary — shown after every turn resolves ── -->
+<div id="resolution-modal" class="hidden">
+  <div id="resolution-inner">
+    <div id="resolution-title"></div>
+    <div id="resolution-body"></div>
+    <button id="resolution-close">Continue</button>
+  </div>
+</div>
+
+<!-- ── Force / Refuse modal ── -->
+<div id="fr-modal" class="hidden">
+  <div id="fr-inner">
+    <div id="fr-title">⚔ Force or Refuse Battle?</div>
+    <div id="fr-body"></div>
+    <p id="fr-error" class="hidden" style="color:#e74c3c;margin:6px 0 0;font-size:13px;"></p>
+    <button id="fr-submit">Declare</button>
+    <div id="fr-waiting" class="hidden winter-waiting">Declarations submitted — waiting for opponent…
+      <button id="fr-refresh" style="margin-left:10px;padding:3px 10px;font-size:12px;">Refresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Battle resolution modal ── -->
+<div id="battle-modal" class="hidden">
+  <div id="battle-inner">
+    <div id="battle-title">⚔ Battle Resolution</div>
+    <div id="battle-body"></div>
+    <div id="battle-controls">
+      <div class="battle-field">
+        <label class="battle-label">Victor</label>
+        <select id="battle-winner">
+          <option value="rome">Rome</option>
+          <option value="carthage">Carthage</option>
+        </select>
+      </div>
+      <div class="battle-field">
+        <label class="battle-label">Result type</label>
+        <select id="battle-loss-type">
+          <option value="minor">Minor loss — loser withdraws, cohesion intact</option>
+          <option value="decisive">Decisive loss — loser takes significant casualties</option>
+        </select>
+      </div>
+      <div class="battle-field">
+        <label class="battle-label">Loser retreats to</label>
+        <select id="battle-retreat">
+          <option value="">Auto (nearest safe region)</option>
+        </select>
+      </div>
+    </div>
+    <p id="battle-error" class="hidden"></p>
+    <button id="battle-submit">Record Result</button>
+    <button id="battle-dismiss">Already resolved — refresh</button>
+  </div>
+</div>
+
+<!-- ── Winter Phase Modal ── -->
+<div id="winter-modal" class="hidden">
+  <div id="winter-inner">
+    <div id="winter-title">❄ Winter Quarters</div>
+    <div id="winter-body"></div>
+    <p id="winter-error" class="hidden"></p>
+    <button id="winter-submit" class="hidden">Submit</button>
+    <button id="winter-continue" class="hidden">Continue</button>
+  </div>
+</div>
+
+<!-- ── Game Over Modal ── -->
+<div id="game-over-modal" class="hidden">
+  <div id="game-over-inner">
+    <div id="game-over-title"></div>
+    <div id="game-over-body"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
