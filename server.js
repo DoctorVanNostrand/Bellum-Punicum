@@ -158,13 +158,33 @@ function calculateAttrition(state) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// ── In-memory state store ─────────────────────────────────────────
+// Primary state lives in memory so the server works even on read-only
+// filesystems (common on cloud hosting). File I/O is best-effort persistence.
+let _memState = null;
+
 function loadState() {
-  if (!fs.existsSync(STATE_FILE)) return null;
-  return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+  if (_memState) return _memState;
+  // Cold start — try to load from disk
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      _memState = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+      return _memState;
+    }
+  } catch (e) {
+    console.error('loadState: could not read file, using memory only:', e.message);
+  }
+  return null;
 }
 
 function saveState(state) {
-  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+  _memState = state;
+  // Best-effort file persistence — failures are logged but do not crash the server
+  try {
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+  } catch (e) {
+    console.error('saveState: could not write file (read-only fs?), state kept in memory:', e.message);
+  }
 }
 
 function requireState(res) {
@@ -2085,7 +2105,7 @@ app.get('/admin/sim/state', (req, res) => {
 // Auto-seed a fresh campaign on startup if no state file exists.
 // This ensures the server is always ready for players to join immediately,
 // even on hosting platforms where game-state.json was not deployed.
-if (!fs.existsSync(STATE_FILE)) {
+if (!_memState && !fs.existsSync(STATE_FILE)) {
   try {
     const initial   = JSON.parse(fs.readFileSync(INITIAL_STATE_FILE, 'utf8'));
     const cisRoll   = Math.ceil(Math.random() * 6);
