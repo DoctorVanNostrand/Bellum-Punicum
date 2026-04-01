@@ -87,28 +87,21 @@ async function initJoinScreen() {
   const noCampaignDiv  = document.getElementById('join-no-campaign');
   const joinButtonsDiv = document.getElementById('join-buttons');
 
-  // Fetch which sides are still available; detect missing campaign
+  // Fetch which sides are still available; auto-seed if no campaign exists
   let status = { rome: false, carthage: false };
-  let hasCampaign = false;
   try {
     const r = await fetch('/join-status');
-    if (r.ok)         { status = await r.json(); hasCampaign = true; }
-    else if (r.status === 404) { hasCampaign = false; }
+    if (r.ok) {
+      status = await r.json();
+    } else if (r.status === 404) {
+      // No campaign on server — seed one silently so join buttons work immediately
+      await fetch('/game/new', { method: 'POST' });
+    }
   } catch (_) { /* server may not be up yet */ }
 
-  if (!hasCampaign) {
-    // No state file — show Start Campaign button, hide join buttons
-    noCampaignDiv.classList.remove('hidden');
-    joinButtonsDiv.classList.add('hidden');
-    document.getElementById('btn-start-campaign').addEventListener('click', async () => {
-      await fetch('/game/new', { method: 'POST' });
-      noCampaignDiv.classList.add('hidden');
-      joinButtonsDiv.classList.remove('hidden');
-      // Re-init to refresh button states
-      await initJoinScreen();
-    });
-    return;
-  }
+  // Always show join buttons; hide the "no campaign" notice (it's no longer needed)
+  noCampaignDiv.classList.add('hidden');
+  joinButtonsDiv.classList.remove('hidden');
 
   if (status.rome) {
     btnRome.disabled = true;

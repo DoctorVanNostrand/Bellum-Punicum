@@ -899,11 +899,15 @@ app.post('/game/new', (req, res) => {
   });
 });
 
-// POST /game/reset — wipes game-state.json entirely, forcing both players back to join screen
+// POST /game/reset — seeds a fresh 218 BC game and clears all sessions
 // Use when a session gets stuck (e.g. after sim runs leave stale tokens)
+// Always leaves a valid game-state.json so /join-status returns 200 with both sides free
 app.post('/game/reset', (req, res) => {
-  if (fs.existsSync(STATE_FILE)) fs.unlinkSync(STATE_FILE);
-  res.json({ message: 'Game state cleared — both players must rejoin' });
+  const initial = JSON.parse(fs.readFileSync(INITIAL_STATE_FILE, 'utf8'));
+  // Ensure sessions are wiped
+  initial.sessions = { rome: null, carthage: null };
+  saveState(initial);
+  res.json({ message: 'Game reset — fresh 218 BC campaign, both players must rejoin' });
 });
 
 // GET /game/status
