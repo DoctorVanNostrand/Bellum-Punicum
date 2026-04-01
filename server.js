@@ -2082,6 +2082,29 @@ app.get('/admin/sim/state', (req, res) => {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
+// Auto-seed a fresh campaign on startup if no state file exists.
+// This ensures the server is always ready for players to join immediately,
+// even on hosting platforms where game-state.json was not deployed.
+if (!fs.existsSync(STATE_FILE)) {
+  try {
+    const initial   = JSON.parse(fs.readFileSync(INITIAL_STATE_FILE, 'utf8'));
+    const cisRoll   = Math.ceil(Math.random() * 6);
+    const cisSecured = cisRoll > 3;
+    const cisRegion = initial.regions.find(r => r.region_id === 'cisalpine_gaul');
+    if (cisRegion) {
+      cisRegion.controller = cisSecured ? 'rome' : 'neutral';
+      const medSP = cisRegion.strategic_points?.find(sp => sp.point_id === 'mediolanum');
+      if (medSP && cisSecured) medSP.controller = 'rome';
+    }
+    initial.log.push({ turn: 0, year: 1, type: 'cisalpine_gaul_loyalty_check',
+      roll: cisRoll, threshold: 3, secured: cisSecured, visible_to: 'both' });
+    saveState(initial);
+    console.log(`Auto-seeded fresh 218 BC campaign (cisalpine_gaul ${cisSecured ? 'secured' : 'neutral'})`);
+  } catch (e) {
+    console.error('Warning: could not auto-seed campaign state:', e.message);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`Bellum Punicum server running at http://localhost:${PORT}`);
   console.log('POST /game/new to start a campaign');
