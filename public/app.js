@@ -84,8 +84,8 @@ function hideJoinScreen() {
 async function initJoinScreen() {
   const btnRome        = document.getElementById('join-rome');
   const btnCarthage    = document.getElementById('join-carthage');
-  const noCampaignDiv  = document.getElementById('join-no-campaign');
   const joinButtonsDiv = document.getElementById('join-buttons');
+  const joinFullDiv    = document.getElementById('join-full');
 
   // Fetch which sides are still available; auto-seed if no campaign exists
   let status = { rome: false, carthage: false };
@@ -99,17 +99,32 @@ async function initJoinScreen() {
     }
   } catch (_) { /* server may not be up yet */ }
 
-  // Always show join buttons; hide the "no campaign" notice (it's no longer needed)
-  noCampaignDiv.classList.add('hidden');
-  joinButtonsDiv.classList.remove('hidden');
+  const bothTaken = status.rome && status.carthage;
 
-  if (status.rome) {
-    btnRome.disabled = true;
-    btnRome.querySelector('.join-btn-sub').textContent = 'Already taken';
-  }
-  if (status.carthage) {
-    btnCarthage.disabled = true;
-    btnCarthage.querySelector('.join-btn-sub').textContent = 'Already taken';
+  if (bothTaken) {
+    // Both sides occupied — hide side buttons, show "start new campaign" prompt
+    joinButtonsDiv.classList.add('hidden');
+    joinFullDiv.classList.remove('hidden');
+    document.getElementById('btn-new-campaign').onclick = async () => {
+      const confirmed = window.confirm(
+        'This will end the current session and reset all progress.\n\nStart a new campaign?'
+      );
+      if (!confirmed) return;
+      await fetch('/game/reset', { method: 'POST' });
+      localStorage.removeItem('bp_token');
+      location.reload();
+    };
+  } else {
+    joinButtonsDiv.classList.remove('hidden');
+    joinFullDiv.classList.add('hidden');
+    if (status.rome) {
+      btnRome.disabled = true;
+      btnRome.querySelector('.join-btn-sub').textContent = 'Already taken';
+    }
+    if (status.carthage) {
+      btnCarthage.disabled = true;
+      btnCarthage.querySelector('.join-btn-sub').textContent = 'Already taken';
+    }
   }
 
   async function doJoin(side) {

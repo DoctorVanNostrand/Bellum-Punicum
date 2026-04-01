@@ -554,10 +554,10 @@ button:hover {
 
 #join-error.hidden { display: none; }
 
-#join-no-campaign { margin-bottom: 16px; }
-#join-no-campaign-msg { color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 12px; }
+#join-full { margin: 16px 0; text-align: center; }
+#join-full-msg { color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
 
-.btn-start-campaign {
+#btn-new-campaign {
   background: #5a3e7a;
   border: 1px solid #8b6aad;
   color: #fff;
@@ -568,7 +568,7 @@ button:hover {
   cursor: pointer;
   transition: background 0.2s;
 }
-.btn-start-campaign:hover { background: #7a5a9a; }
+#btn-new-campaign:hover { background: #7a5a9a; }
 
 #join-reset-row {
   margin-top: 24px;
