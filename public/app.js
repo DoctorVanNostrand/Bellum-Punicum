@@ -87,6 +87,14 @@ async function initJoinScreen() {
   const joinButtonsDiv = document.getElementById('join-buttons');
   const joinFullDiv    = document.getElementById('join-full');
 
+  // Always start from a known state — hide "both taken" panel, show buttons
+  joinButtonsDiv.classList.remove('hidden');
+  joinFullDiv.classList.add('hidden');
+  btnRome.disabled = false;
+  btnRome.querySelector('.join-btn-sub').textContent = 'Play as Rome';
+  btnCarthage.disabled = false;
+  btnCarthage.querySelector('.join-btn-sub').textContent = 'Play as Carthage';
+
   // Fetch which sides are still available; auto-seed if no campaign exists
   let status = { rome: false, carthage: false };
   try {
