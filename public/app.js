@@ -794,7 +794,12 @@ function renderForceRefuse() {
   submitBtn.style.display  = alreadyDeclared ? 'none' : '';
   waiting.classList.toggle('hidden', !alreadyDeclared);
 
-  if (alreadyDeclared) { body.innerHTML = ''; return; }
+  if (alreadyDeclared) {
+    body.innerHTML = gameState.phantom_encounter_pending
+      ? `<div style="color:#f39c12;padding:8px 0">⚔ Your feint has been detected — the enemy is deciding whether to engage. Awaiting their decision.</div>`
+      : '';
+    return;
+  }
 
   const ip = gameState.sides[mySide]?.initiative_pool ?? 0;
 
@@ -891,8 +896,10 @@ function showResolutionSummary(resolvedTurn, state) {
 
   title.textContent = `Turn ${resolvedTurn} — Situation Report`;
 
-  // Log entries written during this resolution
-  const logEvents = (state.log || []).filter(e => e.turn === resolvedTurn);
+  // Log entries written during this resolution — filter by both turn AND year to prevent
+  // bleed from same-numbered turns in previous campaign years.
+  const currentYear = state.campaign.current_year;
+  const logEvents = (state.log || []).filter(e => e.turn === resolvedTurn && e.year === currentYear);
 
   // ── Own movements ──
   // Log stores army_id; look up side from the armies list (friendly = full data)
@@ -1159,7 +1166,45 @@ function showResolutionSummary(resolvedTurn, state) {
     }).join('');
   }
 
-  const retreatEvents = logEvents.filter(e => e.type === 'retreat' && e.reason === 'refused_battle');
+  // Section: Feint reveals
+  const feintRevealEvents = logEvents.filter(e => e.type === 'feint_revealed' && (e.feinting_side || e.side));
+  if (feintRevealEvents.length) {
+    html += '<div class="res-section-title">🎭 Feint Revealed</div>';
+    html += feintRevealEvents.map(e => {
+      const rname = state.regions.find(r => r.region_id === e.region)?.name ?? e.region;
+      // New-style phantom feint (has feinting_side / deceived_side)
+      if (e.feinting_side) {
+        const feintingSide = e.feinting_side;
+        const deceivedSide = e.deceived_side;
+        const choiceLabel  = { force: 'Forced', accept: 'Accepted', refuse: 'Refused' }[e.deceived_choice] ?? capitalize(e.deceived_choice ?? 'accepted');
+        if (feintingSide === mySide) {
+          const outcome = e.deceived_choice === 'force'
+            ? 'Enemy forced — and wasted an initiative point on empty ground!'
+            : e.deceived_choice === 'refuse'
+            ? 'Enemy refused and retreated from your decoy.'
+            : 'Enemy advanced into the feinted region.';
+          return `<div class="res-item res-intel">🎭 Your feint in <strong>${rname}</strong> was contacted — enemy chose <strong>${choiceLabel}</strong>. ${outcome}</div>`;
+        } else {
+          const outcome = e.force_wasted
+            ? `You forced — and spent 1 IP engaging a ghost army.`
+            : e.deceived_choice === 'refuse'
+            ? `You retreated from a decoy.`
+            : `You advanced; the region was empty.`;
+          return `<div class="res-item res-warn">🎭 Feint revealed in <strong>${rname}</strong> — the enemy army was a decoy! You chose <strong>${choiceLabel}</strong>. ${outcome}</div>`;
+        }
+      }
+      // Legacy immediate-reveal style (has side / army_id)
+      const feintSide = e.side;
+      const revealedArmy = state.armies.find(a => a.army_id === e.army_id);
+      const trueLoc = state.regions.find(r => r.region_id === e.true_region)?.name ?? e.true_region;
+      if (feintSide === mySide) {
+        return `<div class="res-item res-warn">🎭 Your feint towards ${rname} was uncovered — enemy found the decoy.</div>`;
+      }
+      return `<div class="res-item res-intel">🎭 Feint uncovered in ${rname} — ${revealedArmy?.name ?? 'enemy army'} is actually in ${trueLoc}.</div>`;
+    }).join('');
+  }
+
+  const retreatEvents = logEvents.filter(e => e.type === 'retreat' && (e.reason === 'refused_battle' || e.reason === 'feint_refused'));
   if (retreatEvents.length) {
     html += '<div class="res-section-title">Retreats</div>';
     html += retreatEvents.map(e => {
@@ -1356,6 +1401,38 @@ function showWinterRecruitModal() {
   const submitted   = winter.recruit_submitted[mySide];
   const mercCost    = gameState.sides.rome.naval_control ? 2 : 1;
 
+  // ── Winter attrition prediction helpers ─────────────────────────────────────
+  const HOME_BASES_CLIENT = { rome: 'latium', carthage: 'africa_proper' };
+  const COND_STEPS = ['good', 'worn', 'depleted', 'broken'];
+  const dropCond_  = c => { const i = COND_STEPS.indexOf(c); return i < COND_STEPS.length - 1 ? COND_STEPS[i + 1] : 'broken'; };
+  const stepUp_    = c => { const i = COND_STEPS.indexOf(c); return i > 0 ? COND_STEPS[i - 1] : 'good'; };
+
+  // Predict final condition after optional reinforce → winter attrition → recovery.
+  // withReinforce: true = assume player reinforces this army (+1 step before attrition).
+  // Returns { cond: string|null, destroyed: bool }
+  function predictWinterEnd(army, withReinforce) {
+    const isHome   = army.true_region === HOME_BASES_CLIENT[army.side];
+    const inSupply = army.in_supply;
+    let cond = army.condition;
+
+    // Step 1: reinforcement (applied before attrition on server)
+    if (withReinforce && cond !== 'good') cond = stepUp_(cond);
+
+    // Step 2: winter attrition
+    if (!inSupply) {
+      if (cond === 'broken') return { cond: null, destroyed: true };
+      cond = dropCond_(dropCond_(cond));
+    }
+
+    // Step 3: recovery
+    if (cond !== 'good') {
+      if (isHome)        cond = 'good';
+      else if (inSupply) cond = stepUp_(cond);
+      // OOS non-home: no recovery
+    }
+    return { cond, destroyed: false };
+  }
+
   let html = '';
 
   // Naval result summary
@@ -1371,6 +1448,49 @@ function showWinterRecruitModal() {
       <span class="${navalResult.contested ? 'warn' : youWin ? 'ok' : ''}">${youWin ? '★ ' : ''}${holder}</span></div>`;
   }
 
+  // ── Winter attrition outlook ──────────────────────────────────────────────
+  // Show before recruitment options so players can make informed reinforce decisions
+  const oosArmies = myArmies.filter(a => !a.in_supply);
+  const supplyArmiesNotHome = myArmies.filter(a => a.in_supply && a.true_region !== HOME_BASES_CLIENT[mySide] && a.condition !== 'good');
+  const homeArmies = myArmies.filter(a => a.true_region === HOME_BASES_CLIENT[mySide] && a.condition !== 'good');
+
+  if (oosArmies.length > 0 || supplyArmiesNotHome.length > 0 || homeArmies.length > 0) {
+    html += `<div class="winter-section-title">Winter Outlook</div>`;
+    // OOS armies — attrition warning
+    oosArmies.forEach(army => {
+      const noR = predictWinterEnd(army, false);
+      const withR = army.condition !== 'good' ? predictWinterEnd(army, true) : null;
+      const noRLabel = noR.destroyed
+        ? `<span style="color:#e74c3c;font-weight:700">☠ Destroyed</span>`
+        : `<span class="cond-${noR.cond}">${capitalize(noR.cond)}</span>`;
+      let reinforceHint = '';
+      if (withR) {
+        const withRLabel = withR.destroyed
+          ? `<span style="color:#e74c3c;font-weight:700">☠ Destroyed</span>`
+          : `<span class="cond-${withR.cond}">${capitalize(withR.cond)}</span>`;
+        reinforceHint = ` &nbsp;<span style="color:var(--text-dim)">(if reinforced: ${withRLabel})</span>`;
+      }
+      html += `<div class="winter-row" style="color:#e67e22">
+        <span>⚠ ${army.name} <span style="color:var(--text-dim);font-size:11px">out of supply</span></span>
+        <span><span class="cond-${army.condition}">${capitalize(army.condition)}</span> → ${noRLabel}${reinforceHint}</span>
+      </div>`;
+    });
+    // In-supply armies recovering (positive info, muted)
+    supplyArmiesNotHome.forEach(army => {
+      const outcome = predictWinterEnd(army, false);
+      html += `<div class="winter-row" style="color:var(--text-dim)">
+        <span>${army.name} <span style="font-size:11px">in supply</span></span>
+        <span><span class="cond-${army.condition}">${capitalize(army.condition)}</span> → <span class="cond-${outcome.cond}">${capitalize(outcome.cond)}</span> <span style="font-size:11px">(recovery)</span></span>
+      </div>`;
+    });
+    homeArmies.forEach(army => {
+      html += `<div class="winter-row" style="color:var(--text-dim)">
+        <span>${army.name} <span style="font-size:11px">at home base</span></span>
+        <span><span class="cond-${army.condition}">${capitalize(army.condition)}</span> → <span class="cond-good">Good</span> <span style="font-size:11px">(full recovery)</span></span>
+      </div>`;
+    });
+  }
+
   // Resources
   html += `<div class="winter-section-title">Recruitment</div>`;
   html += `<div class="winter-row"><span>Resources available</span><span>${myRes}</span></div>`;
@@ -1383,12 +1503,33 @@ function showWinterRecruitModal() {
     myArmies.forEach(army => {
       if (army.condition !== 'good') {
         anyOptions = true;
+        const afterReinforce = stepUp_(army.condition);
+        const winterWithR    = predictWinterEnd(army, true);
+        const winterNoR      = predictWinterEnd(army, false);
+        const oos            = !army.in_supply;
+
+        // End-of-winter label (with reinforce)
+        const endLabel = winterWithR.destroyed
+          ? `<span style="color:#e74c3c;font-weight:600">☠ Destroyed</span>`
+          : `<span class="cond-${winterWithR.cond}">${capitalize(winterWithR.cond)}</span>`;
+
+        // Show the winter end result only if different from the post-reinforce step (i.e., attrition/recovery changes it)
+        const winterNote = (oos || winterWithR.cond !== afterReinforce)
+          ? `&nbsp;<span style="color:var(--text-dim);font-size:11px">→ ends winter at ${endLabel}</span>`
+          : '';
+
+        // Destroyed-without-reinforce warning
+        const destroyedWarning = (oos && winterNoR.destroyed)
+          ? `<br><span style="color:#e74c3c;font-size:11px;margin-left:18px">⚠ Will be destroyed this winter without reinforcement</span>`
+          : '';
+
         html += `<div class="winter-recruit-row">
           <label>
             <input type="checkbox" class="recruit-reinforce" data-army="${army.army_id}">
             Reinforce ${army.name}
             <span class="cond-${army.condition}">${capitalize(army.condition)}</span>
-            → +1 step &nbsp;<span style="color:var(--text-dim)">(cost: 1)</span>
+            → <span class="cond-${afterReinforce}">${capitalize(afterReinforce)}</span>
+            &nbsp;<span style="color:var(--text-dim)">(cost: 1)</span>${winterNote}${destroyedWarning}
           </label>
         </div>`;
       }

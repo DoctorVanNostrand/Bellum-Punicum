@@ -143,6 +143,7 @@ function calculateAttrition(state) {
 
     state.log.push({
       turn:             state.campaign.current_season_turn - 1,
+      year:             state.campaign.current_year,
       type:             'attrition',
       side:             army.side,
       army_id:          army.army_id,
@@ -248,8 +249,26 @@ function filterStateForPlayer(state, player) {
   out.orders_submitted = state.orders_submitted;
   out.my_orders        = state.orders?.[player] ?? null;
   out.pending_battles  = state.pending_battles ?? [];
-  out.pending_encounters = state.pending_encounters ?? [];
   out.shared_occupations = state.shared_occupations ?? [];
+
+  // Filter pending_encounters: strip phantom metadata from the deceived player's view
+  // (they should see it as a real encounter); remove phantom encounters entirely from
+  // the feinting player's view (they have nothing to decide), but flag it for the UI.
+  out.phantom_encounter_pending = false;
+  out.pending_encounters = (state.pending_encounters ?? []).reduce((acc, enc) => {
+    if (!enc.is_phantom) { acc.push(enc); return acc; }
+    if (enc.feinting_side === player) {
+      // Feinting player: hide the encounter, just signal that their feint is active
+      out.phantom_encounter_pending = true;
+      return acc;
+    }
+    // Deceived player: show as a real encounter — strip phantom markers, add
+    // a placeholder for the feinting side so the enemy army appears in the UI.
+    const { is_phantom, feinting_army_id, feinting_side, ...visibleEnc } = enc;
+    visibleEnc[feinting_side] = { army_ids: [feinting_army_id], entered_from: null };
+    acc.push(visibleEnc);
+    return acc;
+  }, []);
   // Own declarations visible; opponent's sealed until both have declared
   out.my_force_refuse     = state.force_refuse_declarations?.[player] ?? null;
   out.opponent_force_refuse_declared = !!(
@@ -382,6 +401,7 @@ function processScouting(state) {
 
         state.log.push({
           turn:               state.campaign.current_season_turn - 1, // log on the turn it was ordered, not the new turn
+          year:               state.campaign.current_year,
           type:               order.type,
           side,
           army_id:            order.army_id,
@@ -469,13 +489,19 @@ function applyMilitaryOccupation(state) {
   });
 
   state.regions.forEach(region => {
-    if (region.theater === 'italia') return;          // Italian regions: loyalty system governs
     if (CAPITAL_REGIONS.has(region.region_id)) return; // Capital regions: never flip by occupation
     const sides = byRegion[region.region_id];
     if (!sides || sides.size === 0) return;   // no army here
     if (sides.size > 1) return;               // contested — force/refuse/battle handles this
     const [occupyingSide] = sides;
     if (region.controller === occupyingSide) return; // already friendly
+
+    // Italian regions: loyalty/defection system governs for Rome — they cannot recapture
+    // Italian territory through military occupation alone.
+    // Exception: Carthage may occupy a neutral Italian region (it has no Roman loyalty bond).
+    if (region.theater === 'italia') {
+      if (!(occupyingSide === 'carthage' && region.controller === 'neutral')) return;
+    }
 
     const opponent = occupyingSide === 'rome' ? 'carthage' : 'rome';
     const prevController = region.controller;
@@ -486,6 +512,7 @@ function applyMilitaryOccupation(state) {
     });
     state.log.push({
       turn:           state.campaign.current_season_turn,
+      year:           state.campaign.current_year,
       type:           'occupation',
       region:         region.region_id,
       side:           occupyingSide,
@@ -538,18 +565,19 @@ function checkDefection(state, regionId, crushingVictory) {
     region.strategic_points.forEach(sp => {
       if (sp.fortification_rating === 0) sp.controller = 'carthage';
     });
-    state.log.push({ turn, type: 'defection', region_id: regionId, visible_to: 'both' });
+    state.log.push({ turn, year: state.campaign.current_year, type: 'defection', region_id: regionId, visible_to: 'both' });
   }
 
   return { region_id: regionId, region_name: region.name, roll, modifiers, threshold: effectiveThreshold, defects };
 }
 
-// Restore loyalty when Rome moves a Good or Worn army into a defected region.
+// Restore loyalty when Rome moves a Good or Worn army into a Carthage-held Italian region.
+// Covers both defected regions (loyalty system) and regions taken by Carthage via occupation.
 function checkLoyaltyRecovery(state) {
   const turn = state.campaign.current_season_turn;
   Object.keys(LOYALTY_REGIONS).forEach(regionId => {
     const region = state.regions.find(r => r.region_id === regionId);
-    if (!region || !region.defected) return;
+    if (!region || region.controller !== 'carthage') return;
     const romeArmyHere = state.armies.some(
       a => a.side === 'rome' && a.true_region === regionId && ['good', 'worn'].includes(a.condition)
     );
@@ -558,7 +586,7 @@ function checkLoyaltyRecovery(state) {
     region.defected   = false;
     // Restore all SPs to Rome
     region.strategic_points.forEach(sp => { sp.controller = 'rome'; });
-    state.log.push({ turn, type: 'loyalty_restored', region_id: regionId, visible_to: 'both' });
+    state.log.push({ turn, year: state.campaign.current_year, type: 'loyalty_restored', region_id: regionId, visible_to: 'both' });
   });
 }
 
@@ -597,6 +625,7 @@ function processSieges(state) {
 
     state.log.push({
       turn,
+      year:                  state.campaign.current_year,
       type:                  'siege_roll',
       army_id:               army.army_id,
       side:                  army.side,
@@ -620,6 +649,7 @@ function processSieges(state) {
         sp.breach_points_accumulated = 0;
         state.log.push({
           turn,
+          year:       state.campaign.current_year,
           type:       'sp_captured',
           army_id:    army.army_id,
           side:       army.side,
@@ -634,6 +664,7 @@ function processSieges(state) {
           state.campaign.phase  = 'game_over';
           state.log.push({
             turn,
+            year:       state.campaign.current_year,
             type:       'game_over',
             winner:     army.side,
             reason:     'capital_captured',
@@ -673,7 +704,7 @@ function finalizeTurn(state) {
       if (state.depots.find(d => d.side === side && d.region_id === army.true_region)) return;
       state.depots.push({ depot_id: `depot_${Date.now()}_${army.army_id}`, side, region_id: army.true_region });
       state.sides[side].resources = Math.max(0, state.sides[side].resources - 1);
-      state.log.push({ turn: state.campaign.current_season_turn, type: 'depot_established', side, region_id: army.true_region, army_id: order.army_id, visible_to: side });
+      state.log.push({ turn: state.campaign.current_season_turn, year: state.campaign.current_year, type: 'depot_established', side, region_id: army.true_region, army_id: order.army_id, visible_to: side });
     });
   });
 
@@ -688,6 +719,7 @@ function finalizeTurn(state) {
       army.feint_expires_turn = state.campaign.current_season_turn + 2;
       state.log.push({
         turn:         state.campaign.current_season_turn,
+        year:         state.campaign.current_year,
         type:         'feint_placed',
         side:         army.side,
         army_id:      army.army_id,
@@ -702,7 +734,7 @@ function finalizeTurn(state) {
   state.depots = state.depots.filter(depot => {
     const captured = state.armies.some(a => a.side !== depot.side && a.true_region === depot.region_id);
     if (captured) {
-      state.log.push({ turn: state.campaign.current_season_turn, type: 'depot_destroyed', side: depot.side, region_id: depot.region_id, visible_to: 'both' });
+      state.log.push({ turn: state.campaign.current_season_turn, year: state.campaign.current_year, type: 'depot_destroyed', side: depot.side, region_id: depot.region_id, visible_to: 'both' });
       ['rome', 'carthage'].forEach(s => {
         if (state.intelligence[s]?.enemy_depots) {
           state.intelligence[s].enemy_depots = state.intelligence[s].enemy_depots.filter(d => d.depot_id !== depot.depot_id);
@@ -774,6 +806,7 @@ function resolveTurn(state) {
     army.true_region = order.to_region;
     state.log.push({
       turn:    state.campaign.current_season_turn,
+      year:    state.campaign.current_year,
       type:    'move',
       army_id: order.army_id,
       from:    enteredFrom[order.army_id],
@@ -781,13 +814,30 @@ function resolveTurn(state) {
     });
   });
 
+  // Identify phantom-encounter regions: enemy moved into a feint_region but feinting army is absent.
+  // These trigger the force/refuse screen (feint is NOT revealed yet — deferred until after decision).
+  const phantomRegions = new Set();
+  allOrders.forEach(order => {
+    if (order.type !== 'move') return;
+    const movingArmy = state.armies.find(a => a.army_id === order.army_id);
+    if (!movingArmy) return;
+    const opp = movingArmy.side === 'rome' ? 'carthage' : 'rome';
+    state.armies.forEach(ea => {
+      if (ea.side !== opp || !ea.feint_region) return;
+      if (ea.feint_region !== movingArmy.true_region) return;
+      if (ea.true_region  === movingArmy.true_region) return; // real army here — not a feint
+      phantomRegions.add(movingArmy.true_region);
+    });
+  });
+
   // After all movement: check if any army moved into an enemy feinted region.
-  // If the feinting army is NOT there (it didn't actually move there), reveal the feint.
+  // Phantom regions are deferred to the force/refuse screen; other feint reveals fire immediately.
   allOrders.forEach(order => {
     if (order.type !== 'move') return;
     const movingArmy = state.armies.find(a => a.army_id === order.army_id);
     if (!movingArmy) return;
     const movedToRegion = movingArmy.true_region; // already updated above
+    if (phantomRegions.has(movedToRegion)) return; // will be revealed via force/refuse instead
     const movingSide = movingArmy.side;
     const opponentSide = movingSide === 'rome' ? 'carthage' : 'rome';
 
@@ -810,6 +860,7 @@ function resolveTurn(state) {
       }
       state.log.push({
         turn:           state.campaign.current_season_turn,
+        year:           state.campaign.current_year,
         type:           'feint_revealed',
         side:           opponentSide,
         army_id:        enemyArmy.army_id,
@@ -831,6 +882,27 @@ function resolveTurn(state) {
   // Detect encounters (new movement + persistent shared occupations)
   const encounters = detectEncounters(state, enteredFrom);
 
+  // Inject phantom encounters for each feint region that triggered a contact
+  phantomRegions.forEach(region => {
+    if (encounters.find(e => e.region === region)) return; // real encounter takes priority
+    const feintingArmy = state.armies.find(a => a.feint_region === region);
+    if (!feintingArmy) return;
+    const deceivedSide = feintingArmy.side === 'rome' ? 'carthage' : 'rome';
+    const deceivedMovers = state.armies.filter(a =>
+      a.side === deceivedSide && a.true_region === region && enteredFrom[a.army_id] !== undefined
+    );
+    if (deceivedMovers.length === 0) return;
+    encounters.push({
+      encounter_id:      `enc_phantom_${Date.now()}_${region}`,
+      region,
+      is_phantom:        true,
+      feinting_side:     feintingArmy.side,
+      feinting_army_id:  feintingArmy.army_id,
+      consecutive_refusals: 0,
+      [deceivedSide]:    { army_ids: deceivedMovers.map(a => a.army_id), entered_from: enteredFrom[deceivedMovers[0].army_id] ?? null },
+    });
+  });
+
   if (encounters.length > 0) {
     // Pause turn resolution — wait for force/refuse declarations before finalising
     state.pending_encounters          = encounters;
@@ -840,6 +912,16 @@ function resolveTurn(state) {
     state._deferred_orders = JSON.parse(JSON.stringify(state.orders));
     state.orders           = { rome: null, carthage: null };
     state.orders_submitted = { rome: false, carthage: false };
+
+    // Auto-declare empty for any side that has no encounters they are party to.
+    // This covers the feinting player in a phantom-only encounter: they need not act,
+    // so their declaration is pre-filled as [] so resolution fires as soon as the
+    // deceived player submits.
+    ['rome', 'carthage'].forEach(side => {
+      const hasEncounters = encounters.some(enc => !!enc[side]);
+      if (!hasEncounters) state.force_refuse_declarations[side] = [];
+    });
+
     return; // caller saves state
   }
 
@@ -1184,8 +1266,55 @@ app.post('/force-refuse/declare', (req, res) => {
     const carthChoice = carthDecls[enc.encounter_id] || 'refuse';
     const turn = state.campaign.current_season_turn;
 
+    // ── Phantom encounter: feint contact resolution ───────────────────────────
+    if (enc.is_phantom) {
+      const deceivedSide  = enc.feinting_side === 'rome' ? 'carthage' : 'rome';
+      const deceivedChoice = deceivedSide === 'rome' ? romeChoice : carthChoice;
+      const feintingArmy  = state.armies.find(a => a.army_id === enc.feinting_army_id);
+
+      // Reveal the feint: clear markers and update the deceived player's intel
+      if (feintingArmy) {
+        feintingArmy.feint_region      = null;
+        feintingArmy.feint_expires_turn = null;
+        const intelEntry = (state.intelligence[deceivedSide]?.enemy_armies || [])
+          .find(e => e.army_id === feintingArmy.army_id);
+        if (intelEntry) {
+          intelEntry.last_known_region = feintingArmy.true_region;
+          intelEntry.last_known_turn   = turn;
+        }
+      }
+
+      state.log.push({
+        turn, year: state.campaign.current_year,
+        type:              'feint_revealed',
+        feinting_army_id:  enc.feinting_army_id,
+        feinting_side:     enc.feinting_side,
+        deceived_side:     deceivedSide,
+        region:            enc.region,
+        deceived_choice:   deceivedChoice,
+        force_wasted:      deceivedChoice === 'force',
+        visible_to:        'both',
+      });
+
+      // If deceived player refused, they retreat back to where they came from
+      if (deceivedChoice === 'refuse') {
+        const deceivedArmy = state.armies.find(a => a.army_id === enc[deceivedSide]?.army_ids?.[0]);
+        const retreatTo    = enc[deceivedSide]?.entered_from;
+        if (deceivedArmy && retreatTo) {
+          state.log.push({
+            turn, year: state.campaign.current_year,
+            type: 'retreat', army_id: deceivedArmy.army_id,
+            from: enc.region, to: retreatTo, reason: 'feint_refused', visible_to: 'both',
+          });
+          deceivedArmy.true_region = retreatTo;
+        }
+      }
+      // force / accept: army stays in the region — no battle
+      return; // skip normal encounter resolution for this phantom
+    }
+
     state.log.push({
-      turn, type: 'force_refuse_resolved', region: enc.region,
+      turn, year: state.campaign.current_year, type: 'force_refuse_resolved', region: enc.region,
       rome_choice: romeChoice, carthage_choice: carthChoice, visible_to: 'both',
     });
 
@@ -1199,7 +1328,7 @@ app.post('/force-refuse/declare', (req, res) => {
       // Battle
       const armyIds = [...(enc.rome?.army_ids || []), ...(enc.carthage?.army_ids || [])];
       state.pending_battles.push({ turn, region: enc.region, armies: armyIds });
-      state.log.push({ turn, type: 'battle_triggered', region: enc.region, armies: armyIds });
+      state.log.push({ turn, year: state.campaign.current_year, type: 'battle_triggered', region: enc.region, armies: armyIds });
       state.shared_occupations = state.shared_occupations.filter(so => so.region !== enc.region);
 
     } else if (bothRefuse) {
@@ -1218,7 +1347,7 @@ app.post('/force-refuse/declare', (req, res) => {
         state.shared_occupations.push(soEntry);
       }
       state.log.push({
-        turn, type: 'shared_occupation', region: enc.region,
+        turn, year: state.campaign.current_year, type: 'shared_occupation', region: enc.region,
         consecutive_refusals: newConsecutive, visible_to: 'both',
       });
 
@@ -1234,16 +1363,20 @@ app.post('/force-refuse/declare', (req, res) => {
         if (retreatTo) {
           const from = refuserArmy.true_region;
           refuserArmy.true_region = retreatTo;
-          state.log.push({ turn, type: 'retreat', army_id: refuserArmy.army_id, from, to: retreatTo, reason: 'refused_battle', visible_to: 'both' });
+          state.log.push({ turn, year: state.campaign.current_year, type: 'retreat', army_id: refuserArmy.army_id, from, to: retreatTo, reason: 'refused_battle', visible_to: 'both' });
         } else {
           // Encirclement — army destroyed
           state.armies = state.armies.filter(a => a.army_id !== refuserArmy.army_id);
-          state.log.push({ turn, type: 'encircled_destroyed', army_id: refuserArmy.army_id, region: enc.region, side: refuserSide, visible_to: 'both' });
+          state.log.push({ turn, year: state.campaign.current_year, type: 'encircled_destroyed', army_id: refuserArmy.army_id, region: enc.region, side: refuserSide, visible_to: 'both' });
         }
       }
-      // Forcer takes region control (Italian loyalty regions excluded — no military occupation there)
+      // Forcer takes region control.
+      // Italian loyalty regions are excluded for Rome (loyalty/defection system only),
+      // but Carthage may take neutral Italian territory this way.
       const regionObj = state.regions.find(r => r.region_id === enc.region);
-      if (regionObj && !LOYALTY_REGIONS[enc.region]) {
+      const italiaBocked = regionObj?.theater === 'italia' &&
+                           !(forcerSide === 'carthage' && regionObj.controller === 'neutral');
+      if (regionObj && !italiaBocked) {
         regionObj.controller = forcerSide;
         regionObj.strategic_points.forEach(sp => {
           if (sp.fortification_rating === 0) sp.controller = forcerSide;
@@ -1357,7 +1490,7 @@ app.post('/battle/resolve', (req, res) => {
     // Trigger 1: army was already Broken entering this battle → destroyed on loss
     if (condBefore === 'broken') {
       destroyedIds.add(army.army_id);
-      state.log.push({ turn, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'broken_in_battle', region, visible_to: 'both' });
+      state.log.push({ turn, year: state.campaign.current_year, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'broken_in_battle', region, visible_to: 'both' });
       return;
     }
 
@@ -1372,6 +1505,7 @@ app.post('/battle/resolve', (req, res) => {
 
     state.log.push({
       turn,
+      year:            state.campaign.current_year,
       type:            'battle_attrition',
       side:            loser,
       army_id:         army.army_id,
@@ -1392,11 +1526,11 @@ app.post('/battle/resolve', (req, res) => {
 
     if (retreatTo && retreatTo !== region) {
       army.true_region = retreatTo;
-      state.log.push({ turn, type: 'retreat', army_id: army.army_id, from, to: retreatTo });
+      state.log.push({ turn, year: state.campaign.current_year, type: 'retreat', army_id: army.army_id, from, to: retreatTo });
     } else {
       // Trigger 2: no valid retreat → encircled and destroyed
       destroyedIds.add(army.army_id);
-      state.log.push({ turn, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'encircled', region, visible_to: 'both' });
+      state.log.push({ turn, year: state.campaign.current_year, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'encircled', region, visible_to: 'both' });
     }
   });
 
@@ -1407,9 +1541,12 @@ app.post('/battle/resolve', (req, res) => {
   // Winner takes region control — exceptions: Italian loyalty regions (defection system)
   // and capital regions (never politically controlled by the opposing side short of capital capture).
   const regionObj = state.regions.find(r => r.region_id === region);
-  const isLoyaltyRegion = !!LOYALTY_REGIONS[region];
   const isCapitalRegion = CAPITAL_REGIONS.has(region);
-  if (regionObj && !isLoyaltyRegion && !isCapitalRegion) {
+  // Italian loyalty regions: Rome cannot retake via battle victory (loyalty/defection system only).
+  // Exception: Carthage may take a neutral Italian region through battle.
+  const italiaBlocked = regionObj?.theater === 'italia' &&
+                        !(winner === 'carthage' && regionObj.controller === 'neutral');
+  if (regionObj && !italiaBlocked && !isCapitalRegion) {
     regionObj.controller = winner;
     // Only unfortified SPs flip automatically; fortified ones require a siege
     regionObj.strategic_points.forEach(sp => {
@@ -1424,12 +1561,12 @@ app.post('/battle/resolve', (req, res) => {
   // VP: +1 for battle victory, +2 per destroyed enemy army (immediate, one-time)
   const turn = state.campaign.current_season_turn;
   state.sides[winner].vp_total = (state.sides[winner].vp_total || 0) + 1;
-  state.log.push({ turn, type: 'vp_earned', side: winner, amount: 1, reason: 'battle_victory', region, visible_to: 'both' });
+  state.log.push({ turn, year: state.campaign.current_year, type: 'vp_earned', side: winner, amount: 1, reason: 'battle_victory', region, visible_to: 'both' });
 
   if (destroyedIds.size > 0) {
     const vpFromDestruction = destroyedIds.size * 2;
     state.sides[winner].vp_total += vpFromDestruction;
-    state.log.push({ turn, type: 'vp_earned', side: winner, amount: vpFromDestruction, reason: 'army_destroyed', count: destroyedIds.size, region, visible_to: 'both' });
+    state.log.push({ turn, year: state.campaign.current_year, type: 'vp_earned', side: winner, amount: vpFromDestruction, reason: 'army_destroyed', count: destroyedIds.size, region, visible_to: 'both' });
   }
 
   // Decisive victory → step up winner army experience (capped at elite)
@@ -1439,7 +1576,7 @@ app.post('/battle/resolve', (req, res) => {
       const expBefore = army.experience;
       army.experience = stepUpExperience(expBefore);
       if (army.experience !== expBefore) {
-        state.log.push({ turn, type: 'experience_gained', army_id: army.army_id, side: winner,
+        state.log.push({ turn, year: state.campaign.current_year, type: 'experience_gained', army_id: army.army_id, side: winner,
           experience_before: expBefore, experience_after: army.experience, visible_to: 'both' });
       }
     });
@@ -1449,6 +1586,7 @@ app.post('/battle/resolve', (req, res) => {
   const loserFinalCond = loserArmies[0]?.condition ?? 'unknown';
   state.log.push({
     turn:            state.campaign.current_season_turn,
+    year:            state.campaign.current_year,
     type:            'battle_resolved',
     region,
     winner,

@@ -158,7 +158,7 @@
     {
       "region_id": "illyria",
       "name": "Illyria",
-      "theater": "italia",
+      "theater": "balkans",
       "controller": "neutral",
       "loyalty_rating": null,
       "defected": false,

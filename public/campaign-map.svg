@@ -22,8 +22,8 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="2.9056113"
-     inkscape:cx="510.7359"
-     inkscape:cy="232.13704"
+     inkscape:cx="226.11421"
+     inkscape:cy="452.4005"
      inkscape:window-width="2560"
      inkscape:window-height="1369"
      inkscape:window-x="-8"
@@ -252,13 +252,13 @@
        id="region-numidia_west"
        class="region"
        data-region="numidia_west"
-       d="m 217.899,486.427 48.736,5.279 44.144,-26.504 106.222,-35.373 -0.274,160.198 h -184.82 z"
+       d="m 212.73658,483.32955 12.70508,-7.55551 7.68275,10.07952 33.85475,1.7225 15.18175,-18.22325 29.99474,-9.6574 22.54305,-15.11756 25.7211,-8.26412 56.5812,-6.48473 -0.274,160.198 -197.20982,-63.32574 -98.86017,-21.57958 7.02413,-19.16165 7.73391,-22.5332 17.61367,-2.99959 12.89991,16.15859 18.96866,9.36712 z"
        fill="#c89050"
        fill-opacity="0.62"
        stroke="#3a2008"
        stroke-width="1.2"
        stroke-linejoin="round"
-       sodipodi:nodetypes="ccccccc" />
+       sodipodi:nodetypes="cccccccccccccccccc" />
     <path
        id="region-numidia_east"
        class="region"
