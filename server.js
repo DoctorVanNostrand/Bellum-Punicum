@@ -506,9 +506,9 @@ function applyMilitaryOccupation(state) {
     const opponent = occupyingSide === 'rome' ? 'carthage' : 'rome';
     const prevController = region.controller;
     region.controller = occupyingSide;
-    // Only unfortified SPs flip automatically; fortified ones must be separately besieged
+    // Unfortified SPs always flip; fortified SPs also flip if taken from neutral (no prior defender)
     region.strategic_points.forEach(sp => {
-      if (sp.fortification_rating === 0) sp.controller = occupyingSide;
+      if (sp.fortification_rating === 0 || prevController === 'neutral') sp.controller = occupyingSide;
     });
     state.log.push({
       turn:           state.campaign.current_season_turn,
@@ -1377,9 +1377,10 @@ app.post('/force-refuse/declare', (req, res) => {
       const italiaBocked = regionObj?.theater === 'italia' &&
                            !(forcerSide === 'carthage' && regionObj.controller === 'neutral');
       if (regionObj && !italiaBocked) {
+        const prevCtrl = regionObj.controller;
         regionObj.controller = forcerSide;
         regionObj.strategic_points.forEach(sp => {
-          if (sp.fortification_rating === 0) sp.controller = forcerSide;
+          if (sp.fortification_rating === 0 || prevCtrl === 'neutral') sp.controller = forcerSide;
         });
       }
       // Clear any shared occupation here
@@ -1547,10 +1548,11 @@ app.post('/battle/resolve', (req, res) => {
   const italiaBlocked = regionObj?.theater === 'italia' &&
                         !(winner === 'carthage' && regionObj.controller === 'neutral');
   if (regionObj && !italiaBlocked && !isCapitalRegion) {
+    const prevCtrl = regionObj.controller;
     regionObj.controller = winner;
-    // Only unfortified SPs flip automatically; fortified ones require a siege
+    // Unfortified SPs always flip; fortified SPs also flip if taken from neutral (no prior defender)
     regionObj.strategic_points.forEach(sp => {
-      if (sp.fortification_rating === 0) sp.controller = winner;
+      if (sp.fortification_rating === 0 || prevCtrl === 'neutral') sp.controller = winner;
     });
   }
 
