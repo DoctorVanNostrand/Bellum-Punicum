@@ -237,7 +237,7 @@ function filterStateForPlayer(state, player) {
       is_intelligence:  true,
       true_region:      null,
       last_known_region: apparentRegion,
-      last_known_turn:   intel?.last_known_turn   ?? null,
+      last_known_turn:   feintVisible ? currentTurn : (intel?.last_known_turn ?? null),
       condition:        intel?.condition_known ? intel.known_condition : 'unknown',
       // feint_region and feint_expires_turn are intentionally stripped (not included)
     };
@@ -571,6 +571,51 @@ function checkDefection(state, regionId, crushingVictory) {
   return { region_id: regionId, region_name: region.name, roll, modifiers, threshold: effectiveThreshold, defects };
 }
 
+// Apply destabilized flags to adjacent Italian allied regions after a decisive Carthage victory.
+// Flagged regions trigger a loyalty roll when Hannibal subsequently enters them.
+function applyDestabilizedFlags(state, battleRegionId) {
+  const turn = state.campaign.current_season_turn;
+  const adjacent = state.adjacency[battleRegionId] || [];
+  adjacent.forEach(adjId => {
+    if (!LOYALTY_REGIONS[adjId] || CAPITAL_REGIONS.has(adjId)) return;
+    const adjRegion = state.regions.find(r => r.region_id === adjId);
+    if (!adjRegion || adjRegion.controller !== 'rome' || adjRegion.defected) return;
+    adjRegion.destabilized = true;
+    state.log.push({
+      turn, year: state.campaign.current_year,
+      type: 'region_destabilized', region_id: adjId,
+      cause_region: battleRegionId, visible_to: 'both',
+    });
+  });
+}
+
+// Attempt a loyalty roll triggered when Hannibal enters a destabilized region.
+// Suppressed (flag preserved) if Rome has a Good/Worn army in that specific region.
+// Otherwise rolls defection and clears the destabilized flag.
+function checkDestabilizedEntry(state, regionId) {
+  const region = state.regions.find(r => r.region_id === regionId);
+  if (!region?.destabilized) return null;
+
+  const turn = state.campaign.current_season_turn;
+
+  // Rome army present in this region suppresses the roll — flag stays for next entry
+  const romeArmyPresent = state.armies.some(
+    a => a.side === 'rome' && a.true_region === regionId && ['good', 'worn'].includes(a.condition)
+  );
+  if (romeArmyPresent) {
+    state.log.push({
+      turn, year: state.campaign.current_year,
+      type: 'destabilized_suppressed', region_id: regionId,
+      reason: 'rome_army_present', visible_to: 'both',
+    });
+    return null;
+  }
+
+  // Clear the flag and roll defection (entry rolls are not crushing)
+  region.destabilized = false;
+  return checkDefection(state, regionId, false);
+}
+
 // Restore loyalty when Rome moves a Good or Worn army into a Carthage-held Italian region.
 // Covers both defected regions (loyalty system) and regions taken by Carthage via occupation.
 function checkLoyaltyRecovery(state) {
@@ -730,8 +775,12 @@ function finalizeTurn(state) {
     });
   });
 
-  // Destroy depots that enemy armies occupy
+  // Destroy depots that enemy armies uncontestedly occupy.
+  // Defer destruction if a battle is still pending in that region — the depot is only
+  // destroyed once the battle resolves and the loser retreats (handled in /battle/resolve).
+  const pendingBattleRegions = new Set((state.pending_battles || []).map(b => b.region));
   state.depots = state.depots.filter(depot => {
+    if (pendingBattleRegions.has(depot.region_id)) return true; // defer to battle resolve
     const captured = state.armies.some(a => a.side !== depot.side && a.true_region === depot.region_id);
     if (captured) {
       state.log.push({ turn: state.campaign.current_season_turn, year: state.campaign.current_year, type: 'depot_destroyed', side: depot.side, region_id: depot.region_id, visible_to: 'both' });
@@ -813,6 +862,12 @@ function resolveTurn(state) {
       to:      order.to_region,
     });
   });
+
+  // If Hannibal moved into a destabilized region, trigger loyalty roll on entry
+  const hannibal = state.armies.find(a => a.army_id === 'hannibal');
+  if (hannibal && enteredFrom[hannibal.army_id] !== undefined) {
+    checkDestabilizedEntry(state, hannibal.true_region);
+  }
 
   // Identify phantom-encounter regions: enemy moved into a feint_region but feinting army is absent.
   // These trigger the force/refuse screen (feint is NOT revealed yet — deferred until after decision).
@@ -1600,20 +1655,60 @@ app.post('/battle/resolve', (req, res) => {
   // Remove this battle from the queue
   state.pending_battles = state.pending_battles.filter(b => b.region !== region);
 
+  // Destroy the losing side's depot in the battle region now that they have retreated.
+  state.depots = state.depots.filter(d => {
+    if (d.side !== loser || d.region_id !== region) return true;
+    state.log.push({ turn, year: state.campaign.current_year, type: 'depot_destroyed', side: loser, region_id: region, visible_to: 'both' });
+    ['rome', 'carthage'].forEach(s => {
+      if (state.intelligence[s]?.enemy_depots) {
+        state.intelligence[s].enemy_depots = state.intelligence[s].enemy_depots.filter(dep => dep.depot_id !== d.depot_id);
+      }
+    });
+    return false;
+  });
+
   // Loyalty: check for defection if Carthage won in an Italian allied region.
   // checkDefection handles any region control change internally.
   let defectionResult = null;
+  let destabilizedRegions = [];
   if (winner === 'carthage') {
     const crushingVictory = destroyedIds.size > 0 ||
       loserArmies.some(a => a.condition === 'broken');
     defectionResult = checkDefection(state, region, crushingVictory);
+
+    // Decisive victory → destabilize adjacent Italian allied regions
+    if (loss_type === 'decisive') {
+      applyDestabilizedFlags(state, region);
+      destabilizedRegions = (state.adjacency[region] || []).filter(adjId => {
+        const r = state.regions.find(r => r.region_id === adjId);
+        return r?.destabilized;
+      });
+    }
+  }
+
+  // Rome wins in Italy → clear all destabilized flags across Italy
+  if (winner === 'rome') {
+    const regionObj = state.regions.find(r => r.region_id === region);
+    if (regionObj?.theater === 'italia') {
+      const turn = state.campaign.current_season_turn;
+      state.regions.forEach(r => {
+        if (r.destabilized) {
+          r.destabilized = false;
+          state.log.push({
+            turn, year: state.campaign.current_year,
+            type: 'destabilized_cleared', region_id: r.region_id,
+            reason: 'carthage_loss_in_italy', visible_to: 'both',
+          });
+        }
+      });
+    }
   }
 
   updateIntelligence(state);
   calculateSupply(state);
   saveState(state);
 
-  res.json({ ok: true, pending_battles_remaining: state.pending_battles.length, defection: defectionResult });
+  res.json({ ok: true, pending_battles_remaining: state.pending_battles.length, defection: defectionResult, destabilized_regions: destabilizedRegions });
 });
 
 // ─── Winter phase ────────────────────────────────────────────────────────────
@@ -1954,7 +2049,7 @@ function runWinterAutomation(state) {
     });
 
     const vp = regionVP + spVP;
-    state.sides[side].vp_total += vp;
+    state.sides[side].vp_total = (state.sides[side].vp_total ?? 0) + vp;
     state.log.push({
       turn:           state.campaign.current_season_turn,
       year:           state.campaign.current_year,

@@ -275,6 +275,12 @@ button:hover {
   stroke-dasharray: 6,3;
 }
 
+.region.destabilized {
+  stroke: #e67e22;
+  stroke-dasharray: 3,3;
+  stroke-width: 2.5;
+}
+
 .region-label {
   pointer-events: none;
   /* fill and font-size intentionally omitted — the new SVG uses a double-text

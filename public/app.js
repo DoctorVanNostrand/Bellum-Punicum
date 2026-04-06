@@ -1,6 +1,7 @@
 // ─── Bellum Punicum — Phase 2 Frontend ──────────────────────────────────────
 
 const TOKEN_KEY    = 'bp_token';
+const SIDE_KEY     = 'bp_side';
 const YEAR_SEEN_KEY = 'bp_year_seen';
 const TURN_SEEN_KEY = 'bp_turn_seen';
 
@@ -145,6 +146,7 @@ async function initJoinScreen() {
       if (!r.ok)            { errEl.textContent = 'Could not join — try refreshing.'; errEl.classList.remove('hidden'); return; }
       const { token } = await r.json();
       setToken(token);
+      localStorage.setItem(SIDE_KEY, side);
       hideJoinScreen();
       await fetchState();
     } catch (e) {
@@ -175,7 +177,21 @@ async function fetchState() {
   try {
     const res = await fetch('/state', { headers: authHeaders() });
 
-    if (res.status === 401) { clearToken(); showJoinScreen(); return; }
+    if (res.status === 401) {
+      clearToken();
+      const savedSide = localStorage.getItem(SIDE_KEY);
+      if (savedSide) {
+        // Auto-rejoin: try to reclaim the same side (works if the session slot is still open or server restarted)
+        const rejoin = await fetch(`/join?side=${savedSide}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => null);
+        if (rejoin?.ok) {
+          const { token } = await rejoin.json();
+          setToken(token);
+          return fetchState();
+        }
+      }
+      showJoinScreen();
+      return;
+    }
     if (res.status === 404) { showNoGame(); return; }
     if (!res.ok) throw new Error(`Server error ${res.status}`);
 
@@ -252,6 +268,20 @@ async function fetchState() {
         ? `${rname} has defected to Carthage after your victory!\n\nRolled ${e.roll} vs threshold ${e.threshold}${modsLabel}`
         : `${rname} has risen against Rome!\n\nRolled ${e.roll} vs threshold ${e.threshold}${modsLabel}`;
       showNotify('🏛 Defection!', msg);
+    });
+
+    // Destabilized region notifications — shown to both players
+    (gameState.log || []).forEach(e => {
+      if (e.type !== 'region_destabilized') return;
+      const seenKey = `bp_destabilized_seen_${mySide}_${e.year}_${e.turn}_${e.region_id}`;
+      if (localStorage.getItem(seenKey)) return;
+      localStorage.setItem(seenKey, '1');
+      const rname = gameState.regions?.find(r => r.region_id === e.region_id)?.name ?? e.region_id;
+      const causeName = gameState.regions?.find(r => r.region_id === e.cause_region)?.name ?? e.cause_region;
+      const msg = mySide === 'carthage'
+        ? `${rname} is now destabilized — a loyalty roll will trigger if Hannibal enters.\n\n(Caused by decisive victory in ${causeName})`
+        : `${rname} is wavering — the decisive defeat in ${causeName} has shaken local loyalty.`;
+      showNotify('⚡ Region Destabilized', msg);
     });
 
     // Island evacuation notifications — shown to both players
@@ -486,7 +516,6 @@ function renderArmyList(containerId, side) {
         const canReinforce = ['orders', 'force_refuse'].includes(gameState.campaign.phase)
           && !army.emergency_reinforcement
           && army.condition !== 'good'
-          && army.in_supply
           && !gameState.sides[mySide]?.emergency_reinforcement_used_this_season;
         if (canReinforce) {
           const reinforceCost = (mySide === 'carthage' && gameState.sides.rome.naval_control) ? 3 : 2;
@@ -720,12 +749,28 @@ function showBattleModal(battle, total) {
     <div class="battle-armies">${armyHtml}</div>
     <div class="battle-note">Fight this battle in Field of Glory 2, then record the result below.</div>`;
 
-  // Retreat options — adjacent regions the loser could fall back to
-  const retreatSel = document.getElementById('battle-retreat');
-  retreatSel.innerHTML = '<option value="">Auto (nearest safe region)</option>';
-  (gameState.adjacency[battle.region] || []).forEach(r => {
-    retreatSel.innerHTML += `<option value="${r}">${regionName(r)}</option>`;
-  });
+  // Retreat options — adjacent regions the loser could fall back to, excluding enemy-occupied ones.
+  // Rebuilt whenever the winner selection changes since occupied regions depend on who won.
+  function buildRetreatOptions() {
+    const winner = document.getElementById('battle-winner').value;
+    const winnerOccupied = new Set(
+      (gameState.armies || [])
+        .filter(a => a.side === winner && a.true_region)
+        .map(a => a.true_region)
+    );
+    const retreatSel = document.getElementById('battle-retreat');
+    const prev = retreatSel.value;
+    retreatSel.innerHTML = '<option value="">Auto (nearest safe region)</option>';
+    (gameState.adjacency[battle.region] || []).forEach(r => {
+      if (!winnerOccupied.has(r)) {
+        retreatSel.innerHTML += `<option value="${r}">${regionName(r)}</option>`;
+      }
+    });
+    // Restore selection if still valid
+    if (prev && retreatSel.querySelector(`option[value="${prev}"]`)) retreatSel.value = prev;
+  }
+  document.getElementById('battle-winner').addEventListener('change', buildRetreatOptions);
+  buildRetreatOptions();
 
   document.getElementById('battle-error').classList.add('hidden');
   modal.classList.remove('hidden');
@@ -1068,6 +1113,25 @@ function showResolutionSummary(resolvedTurn, state) {
         return `<div class="res-item" style="color:#e67e22;font-weight:600">⚠ ${rname} has defected to Carthage! (rolled ${e.roll} vs threshold ${e.threshold}${modsLabel})</div>`;
       }
       return `<div class="res-item res-intel">${rname} holds firm (rolled ${e.roll} vs threshold ${e.threshold}${modsLabel})</div>`;
+    }).join('');
+  }
+
+  // Section: Destabilized flags applied
+  const destabilizeEvents = logEvents.filter(e => e.type === 'region_destabilized');
+  if (destabilizeEvents.length) {
+    html += '<div class="res-section-title">⚡ Destabilized</div>';
+    html += destabilizeEvents.map(e => {
+      const rname = state.regions.find(r => r.region_id === e.region_id)?.name ?? e.region_id;
+      return `<div class="res-item" style="color:#e67e22">⚡ ${rname} is now destabilized — loyalty roll if Hannibal enters</div>`;
+    }).join('');
+  }
+
+  // Section: Destabilized flags cleared
+  const destClearedEvents = logEvents.filter(e => e.type === 'destabilized_cleared');
+  if (destClearedEvents.length) {
+    html += destClearedEvents.map(e => {
+      const rname = state.regions.find(r => r.region_id === e.region_id)?.name ?? e.region_id;
+      return `<div class="res-item res-intel">✓ ${rname} destabilized flag cleared (Carthage lost in Italy)</div>`;
     }).join('');
   }
 
@@ -1749,7 +1813,7 @@ function renderMap() {
     const el = document.getElementById(`region-${region.region_id}`);
     if (!el) return;
     el.dataset.controller = region.controller;
-    el.setAttribute('class', `region controller-${region.controller}${region.defected ? ' defected' : ''}`);
+    el.setAttribute('class', `region controller-${region.controller}${region.defected ? ' defected' : ''}${region.destabilized ? ' destabilized' : ''}`);
   });
 
   // Sea lane visibility — dim lanes if the viewing player doesn't hold naval control
@@ -1978,6 +2042,12 @@ function renderDetailPanel(regionId) {
   document.getElementById('detail-controller').textContent = capitalize(region.controller);
   document.getElementById('detail-loyalty').textContent    = region.loyalty_rating !== null ? `${region.loyalty_rating}/5` : 'N/A';
   document.getElementById('detail-defected').textContent   = region.defected ? 'Yes' : 'No';
+  const destEl = document.getElementById('detail-destabilized');
+  if (destEl) {
+    destEl.textContent = region.destabilized ? 'Yes' : (region.loyalty_rating !== null ? 'No' : 'N/A');
+    destEl.style.color = region.destabilized ? '#e67e22' : '';
+    destEl.style.fontWeight = region.destabilized ? '600' : '';
+  }
 
   const spList = document.getElementById('detail-sp-list');
   spList.innerHTML = '';
@@ -2112,11 +2182,12 @@ function initTooltip() {
     ttLine(ttName,    region.name,                              '#fff', 18);
     ttLine(ttTheater, capitalize(region.theater) + ' theater',  '#aaa', 34);
     ttLine(ttCtrl,    'Controller: ' + capitalize(region.controller), '#fff', 50);
-    const loyText = region.loyalty_rating !== null ? `Loyalty: ${region.loyalty_rating}/5` : '';
-    ttLine(ttLoyalty, loyText, '#ccc', 66);
+    const destText = region.destabilized ? 'DESTABILIZED' : '';
+    const loyText = region.loyalty_rating !== null ? `Loyalty: ${region.loyalty_rating}/5${destText ? '  ⚡' : ''}` : '';
+    ttLine(ttLoyalty, loyText || destText, destText ? '#e67e22' : '#ccc', 66);
 
     ttBg.setAttribute('x', tx); ttBg.setAttribute('y', ty);
-    ttBg.setAttribute('width', 185); ttBg.setAttribute('height', loyText ? 80 : 62);
+    ttBg.setAttribute('width', 185); ttBg.setAttribute('height', (loyText || destText) ? 80 : 62);
     tooltip.setAttribute('visibility', 'visible');
   });
 
