@@ -2,12 +2,55 @@ const express = require('express');
 const fs      = require('fs');
 const path    = require('path');
 const crypto  = require('crypto');
+const { Pool } = require('pg');
 
 const app  = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const STATE_FILE        = path.join(__dirname, 'game-state.json');
 const INITIAL_STATE_FILE = path.join(__dirname, 'data', 'initial-state.json');
+
+// ─── Postgres persistence (Neon) ─────────────────────────────────────────────
+// Enabled when DATABASE_URL env var is set. Falls back to file-only if absent.
+const pgPool = process.env.DATABASE_URL
+  ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
+  : null;
+
+async function initDB() {
+  if (!pgPool) return;
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS game_state (
+      id         INTEGER PRIMARY KEY DEFAULT 1,
+      state      JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  console.log('Postgres: game_state table ready');
+}
+
+async function loadStateFromDB() {
+  if (!pgPool) return null;
+  try {
+    const { rows } = await pgPool.query('SELECT state FROM game_state WHERE id = 1');
+    return rows[0]?.state ?? null;
+  } catch (e) {
+    console.error('loadStateFromDB error:', e.message);
+    return null;
+  }
+}
+
+async function saveStateToDB(state) {
+  if (!pgPool) return;
+  try {
+    await pgPool.query(
+      `INSERT INTO game_state (id, state, updated_at) VALUES (1, $1::jsonb, NOW())
+       ON CONFLICT (id) DO UPDATE SET state = $1::jsonb, updated_at = NOW()`,
+      [JSON.stringify(state)]
+    );
+  } catch (e) {
+    console.error('saveStateToDB error:', e.message);
+  }
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -186,6 +229,8 @@ function saveState(state) {
   } catch (e) {
     console.error('saveState: could not write file (read-only fs?), state kept in memory:', e.message);
   }
+  // Best-effort DB persistence — async, non-blocking
+  saveStateToDB(state).catch(e => console.error('saveStateToDB async error:', e.message));
 }
 
 function requireState(res) {
@@ -2361,8 +2406,25 @@ if (!_memState && !fs.existsSync(STATE_FILE)) {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`Bellum Punicum server running at http://localhost:${PORT}`);
-  console.log('POST /game/new to start a campaign');
-  console.log(`Sim endpoints available — default key: "${SIM_KEY}" (override with SIM_KEY env var)`);
-});
+async function start() {
+  await initDB();
+
+  // Prefer DB state; fall back to file (loadState() handles that on first request)
+  const dbState = await loadStateFromDB();
+  if (dbState) {
+    _memState = dbState;
+    console.log('State loaded from Postgres');
+  } else if (pgPool) {
+    console.log('Postgres connected but no saved state found — awaiting POST /game/new');
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Bellum Punicum server running at http://localhost:${PORT}`);
+    console.log('POST /game/new to start a campaign');
+    console.log(`Sim endpoints available — default key: "${SIM_KEY}" (override with SIM_KEY env var)`);
+    if (pgPool) console.log('Postgres persistence active (DATABASE_URL set)');
+    else        console.log('File persistence only (set DATABASE_URL to enable Postgres)');
+  });
+}
+
+start().catch(e => { console.error('Startup error:', e); process.exit(1); });
