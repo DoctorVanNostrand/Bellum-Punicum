@@ -454,15 +454,15 @@
       "turn": 0,
       "year": 1,
       "type": "cisalpine_gaul_loyalty_check",
-      "roll": 2,
+      "roll": 1,
       "threshold": 3,
       "secured": false,
       "visible_to": "both"
     }
   ],
   "sessions": {
-    "rome": "110de36a-50e5-40dd-8159-6a91a6a45a0b",
-    "carthage": "e08cd63e-a1aa-49cb-8508-23b0872750f3"
+    "rome": null,
+    "carthage": null
   },
   "orders": {
     "rome": null,
