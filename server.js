@@ -909,11 +909,10 @@ function resolveTurn(state) {
     });
   });
 
-  // If Hannibal moved into a destabilized region, trigger loyalty roll on entry
-  const hannibal = state.armies.find(a => a.army_id === 'hannibal');
-  if (hannibal && enteredFrom[hannibal.army_id] !== undefined) {
-    checkDestabilizedEntry(state, hannibal.true_region);
-  }
+  // If any Carthage army moved into a destabilized region, trigger loyalty roll on entry
+  state.armies.filter(a => a.side === 'carthage' && enteredFrom[a.army_id] !== undefined).forEach(army => {
+    checkDestabilizedEntry(state, army.true_region);
+  });
 
   // Identify phantom-encounter regions: enemy moved into a feint_region but feinting army is absent.
   // These trigger the force/refuse screen (feint is NOT revealed yet — deferred until after decision).
