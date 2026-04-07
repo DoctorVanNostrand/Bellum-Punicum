@@ -18,7 +18,16 @@
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": [
-        { "point_id": "gades", "name": "Gades", "fortification_rating": 2, "controller": "carthage", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "gades",
+          "name": "Gades",
+          "fortification_rating": 2,
+          "controller": "carthage",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     },
     {
@@ -29,7 +38,16 @@
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": [
-        { "point_id": "carthago_nova", "name": "Carthago Nova", "fortification_rating": 2, "controller": "carthage", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "carthago_nova",
+          "name": "Carthago Nova",
+          "fortification_rating": 2,
+          "controller": "carthage",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     },
     {
@@ -67,7 +85,16 @@
       "loyalty_rating": 3,
       "defected": false,
       "strategic_points": [
-        { "point_id": "mediolanum", "name": "Mediolanum", "fortification_rating": 2, "controller": "neutral", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "mediolanum",
+          "name": "Mediolanum",
+          "fortification_rating": 2,
+          "controller": "neutral",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     },
     {
@@ -97,7 +124,16 @@
       "defected": false,
       "carthage_turns_present": 0,
       "strategic_points": [
-        { "point_id": "arretium", "name": "Arretium", "fortification_rating": 2, "controller": "rome", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "arretium",
+          "name": "Arretium",
+          "fortification_rating": 2,
+          "controller": "rome",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     },
     {
@@ -118,7 +154,16 @@
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": [
-        { "point_id": "rome", "name": "Rome", "fortification_rating": 3, "controller": "rome", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "rome",
+          "name": "Rome",
+          "fortification_rating": 3,
+          "controller": "rome",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     },
     {
@@ -130,7 +175,16 @@
       "defected": false,
       "carthage_turns_present": 0,
       "strategic_points": [
-        { "point_id": "capua", "name": "Capua", "fortification_rating": 2, "controller": "rome", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "capua",
+          "name": "Capua",
+          "fortification_rating": 2,
+          "controller": "rome",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     },
     {
@@ -152,7 +206,16 @@
       "defected": false,
       "carthage_turns_present": 0,
       "strategic_points": [
-        { "point_id": "rhegium", "name": "Rhegium", "fortification_rating": 2, "controller": "rome", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "rhegium",
+          "name": "Rhegium",
+          "fortification_rating": 2,
+          "controller": "rome",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     },
     {
@@ -181,7 +244,16 @@
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": [
-        { "point_id": "syracuse", "name": "Syracuse", "fortification_rating": 2, "controller": "neutral", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "syracuse",
+          "name": "Syracuse",
+          "fortification_rating": 2,
+          "controller": "neutral",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     },
     {
@@ -210,7 +282,16 @@
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": [
-        { "point_id": "carthage", "name": "Carthage", "fortification_rating": 3, "controller": "carthage", "under_siege": false, "besieging_army_id": null, "breach_points_accumulated": 0, "siege_equipment_present": false }
+        {
+          "point_id": "carthage",
+          "name": "Carthage",
+          "fortification_rating": 3,
+          "controller": "carthage",
+          "under_siege": false,
+          "besieging_army_id": null,
+          "breach_points_accumulated": 0,
+          "siege_equipment_present": false
+        }
       ]
     }
   ],
@@ -330,51 +411,181 @@
     "rome": {
       "side": "rome",
       "enemy_armies": [
-        { "army_id": "hannibal", "last_known_region": "hispania_citerior", "last_known_turn": 1, "condition_known": false, "known_condition": null },
-        { "army_id": "hasdrubal", "last_known_region": "hispania_ulterior", "last_known_turn": 1, "condition_known": false, "known_condition": null }
+        {
+          "army_id": "hannibal",
+          "last_known_region": "hispania_citerior",
+          "last_known_turn": 1,
+          "condition_known": false,
+          "known_condition": null
+        },
+        {
+          "army_id": "hasdrubal",
+          "last_known_region": "hispania_ulterior",
+          "last_known_turn": 1,
+          "condition_known": false,
+          "known_condition": null
+        }
       ],
       "enemy_depots": []
     },
     "carthage": {
       "side": "carthage",
       "enemy_armies": [
-        { "army_id": "consular", "last_known_region": "cisalpine_gaul", "last_known_turn": 1, "condition_known": false, "known_condition": null },
-        { "army_id": "reserve", "last_known_region": "latium", "last_known_turn": 1, "condition_known": false, "known_condition": null }
+        {
+          "army_id": "consular",
+          "last_known_region": "cisalpine_gaul",
+          "last_known_turn": 1,
+          "condition_known": false,
+          "known_condition": null
+        },
+        {
+          "army_id": "reserve",
+          "last_known_region": "latium",
+          "last_known_turn": 1,
+          "condition_known": false,
+          "known_condition": null
+        }
       ],
       "enemy_depots": []
     }
   },
-  "log": [],
-  "sessions": { "rome": null, "carthage": null },
-  "orders": { "rome": null, "carthage": null },
-  "orders_submitted": { "rome": false, "carthage": false },
+  "log": [
+    {
+      "turn": 0,
+      "year": 1,
+      "type": "cisalpine_gaul_loyalty_check",
+      "roll": 2,
+      "threshold": 3,
+      "secured": false,
+      "visible_to": "both"
+    }
+  ],
+  "sessions": {
+    "rome": "110de36a-50e5-40dd-8159-6a91a6a45a0b",
+    "carthage": "e08cd63e-a1aa-49cb-8508-23b0872750f3"
+  },
+  "orders": {
+    "rome": null,
+    "carthage": null
+  },
+  "orders_submitted": {
+    "rome": false,
+    "carthage": false
+  },
   "pending_battles": [],
   "pending_encounters": [],
-  "force_refuse_declarations": { "rome": null, "carthage": null },
+  "force_refuse_declarations": {
+    "rome": null,
+    "carthage": null
+  },
   "shared_occupations": [],
   "depots": [
-    { "depot_id": "depot_start_1", "side": "carthage", "region_id": "hispania_citerior" }
+    {
+      "depot_id": "depot_start_1",
+      "side": "carthage",
+      "region_id": "hispania_citerior"
+    }
   ],
   "adjacency": {
-    "hispania_ulterior": ["hispania_citerior", "numidia_west"],
-    "hispania_citerior": ["hispania_ulterior", "pyrenean_passes"],
-    "pyrenean_passes": ["hispania_citerior", "transalpine_gaul"],
-    "transalpine_gaul": ["pyrenean_passes", "alpine_passes", "liguria"],
-    "alpine_passes": ["transalpine_gaul", "cisalpine_gaul"],
-    "cisalpine_gaul": ["alpine_passes", "venetia", "liguria", "etruria"],
-    "venetia": ["cisalpine_gaul", "illyria"],
-    "liguria": ["transalpine_gaul", "cisalpine_gaul", "etruria", "sardinia_corsica"],
-    "etruria": ["liguria", "cisalpine_gaul", "umbria_picenum", "latium", "sardinia_corsica"],
-    "umbria_picenum": ["etruria", "latium", "samnium_lucania", "illyria"],
-    "latium": ["etruria", "umbria_picenum", "campania", "samnium_lucania"],
-    "campania": ["latium", "samnium_lucania", "bruttium_calabria"],
-    "samnium_lucania": ["umbria_picenum", "latium", "campania", "bruttium_calabria"],
-    "bruttium_calabria": ["campania", "samnium_lucania", "sicily"],
-    "illyria": ["venetia", "umbria_picenum"],
-    "sardinia_corsica": ["liguria", "etruria", "numidia_west"],
-    "sicily": ["bruttium_calabria", "africa_proper", "numidia_east"],
-    "numidia_west": ["hispania_ulterior", "numidia_east", "sardinia_corsica"],
-    "numidia_east": ["numidia_west", "africa_proper", "sicily"],
-    "africa_proper": ["numidia_east", "sicily"]
+    "hispania_ulterior": [
+      "hispania_citerior",
+      "numidia_west"
+    ],
+    "hispania_citerior": [
+      "hispania_ulterior",
+      "pyrenean_passes"
+    ],
+    "pyrenean_passes": [
+      "hispania_citerior",
+      "transalpine_gaul"
+    ],
+    "transalpine_gaul": [
+      "pyrenean_passes",
+      "alpine_passes",
+      "liguria"
+    ],
+    "alpine_passes": [
+      "transalpine_gaul",
+      "cisalpine_gaul"
+    ],
+    "cisalpine_gaul": [
+      "alpine_passes",
+      "venetia",
+      "liguria",
+      "etruria"
+    ],
+    "venetia": [
+      "cisalpine_gaul",
+      "illyria"
+    ],
+    "liguria": [
+      "transalpine_gaul",
+      "cisalpine_gaul",
+      "etruria",
+      "sardinia_corsica"
+    ],
+    "etruria": [
+      "liguria",
+      "cisalpine_gaul",
+      "umbria_picenum",
+      "latium",
+      "sardinia_corsica"
+    ],
+    "umbria_picenum": [
+      "etruria",
+      "latium",
+      "samnium_lucania",
+      "illyria"
+    ],
+    "latium": [
+      "etruria",
+      "umbria_picenum",
+      "campania",
+      "samnium_lucania"
+    ],
+    "campania": [
+      "latium",
+      "samnium_lucania",
+      "bruttium_calabria"
+    ],
+    "samnium_lucania": [
+      "umbria_picenum",
+      "latium",
+      "campania",
+      "bruttium_calabria"
+    ],
+    "bruttium_calabria": [
+      "campania",
+      "samnium_lucania",
+      "sicily"
+    ],
+    "illyria": [
+      "venetia",
+      "umbria_picenum"
+    ],
+    "sardinia_corsica": [
+      "liguria",
+      "etruria",
+      "numidia_west"
+    ],
+    "sicily": [
+      "bruttium_calabria",
+      "africa_proper",
+      "numidia_east"
+    ],
+    "numidia_west": [
+      "hispania_ulterior",
+      "numidia_east",
+      "sardinia_corsica"
+    ],
+    "numidia_east": [
+      "numidia_west",
+      "africa_proper",
+      "sicily"
+    ],
+    "africa_proper": [
+      "numidia_east",
+      "sicily"
+    ]
   }
 }

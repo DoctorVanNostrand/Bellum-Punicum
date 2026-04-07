@@ -509,6 +509,7 @@ function renderArmyList(containerId, side) {
               pendingOrders[army.army_id] = { army_id: army.army_id, type: 'feint', to_region: val.slice(6) };
             }
             updateInitiativeDisplay(); // live update of committed IP count
+            renderArmyMarkers();       // redraw arrows immediately
           });
         }
 
@@ -552,7 +553,7 @@ function renderArmyList(containerId, side) {
 
 function renderOrderSelector(army) {
   const adjacent   = gameState.adjacency?.[army.true_region] || [];
-  const hasNaval   = gameState.sides[mySide]?.naval_control;
+  const hasNaval   = gameState.sides[mySide]?.naval_control || gameState.naval_contested;
   const moveOpts   = adjacent
     .filter(r => !SEA_CONNECTIONS.has(`${army.true_region}:${r}`) || hasNaval)
     .map(r => {
@@ -593,7 +594,7 @@ function renderOrderSelector(army) {
   const feintOpts = !army.feint_region
     ? adjacent
         .filter(r => !SEA_CONNECTIONS.has(`${army.true_region}:${r}`) || hasNaval)
-        .map(r => `<option value="feint:${r}">${regionName(r)} (1 IP)</option>`)
+        .map(r => `<option value="feint:${r}">🎭 ${regionName(r)} — feint (1 IP)</option>`)
         .join('')
     : '';
 
@@ -1816,10 +1817,10 @@ function renderMap() {
     el.setAttribute('class', `region controller-${region.controller}${region.defected ? ' defected' : ''}${region.destabilized ? ' destabilized' : ''}`);
   });
 
-  // Sea lane visibility — dim lanes if the viewing player doesn't hold naval control
+  // Sea lane visibility — dim lanes if neither side holds naval control (and not contested)
   const seaRoutesGroup = document.getElementById('sea-routes');
   if (seaRoutesGroup) {
-    const hasNaval = gameState.sides[mySide]?.naval_control;
+    const hasNaval = gameState.sides[mySide]?.naval_control || gameState.naval_contested;
     if (hasNaval) {
       seaRoutesGroup.setAttribute('stroke', '#7ABBDA');
       seaRoutesGroup.setAttribute('opacity', '0.9');
@@ -1974,10 +1975,29 @@ function renderArmyMarkers() {
           arrow.setAttribute('x2', dest[0]);
           arrow.setAttribute('y2', dest[1]);
           arrow.setAttribute('stroke',           col.fill);
-          arrow.setAttribute('stroke-width',     1.5);
-          arrow.setAttribute('stroke-dasharray', '4,3');
+          arrow.setAttribute('stroke-width',     3);
           arrow.setAttribute('marker-end',       'url(#arrowhead)');
-          arrow.setAttribute('opacity',          '0.75');
+          arrow.setAttribute('filter',           'url(#arrow-shadow)');
+          arrow.setAttribute('opacity',          '0.9');
+          arrow.style.pointerEvents = 'none';
+          g.appendChild(arrow);
+        }
+      }
+      // Feint order arrow — dashed amber line, distinct from move arrow
+      if (!isIntel && order?.type === 'feint') {
+        const dest = REGION_CENTROIDS[order.to_region];
+        if (dest) {
+          const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          arrow.setAttribute('x1', x);
+          arrow.setAttribute('y1', y);
+          arrow.setAttribute('x2', dest[0]);
+          arrow.setAttribute('y2', dest[1]);
+          arrow.setAttribute('stroke',           '#e67e22');
+          arrow.setAttribute('stroke-width',     3);
+          arrow.setAttribute('stroke-dasharray', '2,5');
+          arrow.setAttribute('marker-end',       'url(#arrowhead-feint)');
+          arrow.setAttribute('filter',           'url(#arrow-shadow)');
+          arrow.setAttribute('opacity',          '0.9');
           arrow.style.pointerEvents = 'none';
           g.appendChild(arrow);
         }
@@ -2284,9 +2304,15 @@ async function loadMap() {
   // Arrowhead marker for movement order display
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   defs.innerHTML = `
-    <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-      <path d="M0,0 L6,3 L0,6 Z" fill="#fff" opacity="0.7"/>
-    </marker>`;
+    <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#fff" opacity="0.9"/>
+    </marker>
+    <marker id="arrowhead-feint" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#e67e22" opacity="0.9"/>
+    </marker>
+    <filter id="arrow-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
+    </filter>`;
   svg.insertBefore(defs, svg.firstChild);
 
   ['depot-markers', 'army-markers', 'sp-markers'].forEach(id => {

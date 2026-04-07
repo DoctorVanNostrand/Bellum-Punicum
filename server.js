@@ -760,8 +760,9 @@ function finalizeTurn(state) {
       if (!army) return;
       army.feint_region = order.to_region;
       // Feints are planted before current_season_turn increments in finalizeTurn.
-      // +2 ensures the feint is visible for one full opponent turn after the increment.
-      army.feint_expires_turn = state.campaign.current_season_turn + 2;
+      // +1: at the start of the next resolveTurn the clear check (expires <= current) fires,
+      // wiping the feint before any orders on that turn are processed (one-turn duration).
+      army.feint_expires_turn = state.campaign.current_season_turn + 1;
       state.log.push({
         turn:         state.campaign.current_season_turn,
         year:         state.campaign.current_year,
@@ -1721,7 +1722,7 @@ function stepUpCondition(condition) {
 
 function calcIncome(state, side) {
   const controlled = state.regions.filter(r => r.controller === side);
-  const regions    = Math.floor(controlled.length / 2);
+  const regions    = Math.floor(controlled.length / 3);
   const naval      = state.sides[side].naval_control ? 1 : 0;
   const battles    = state.sides[side].season_battle_wins ?? 0;
   return { regions, naval, battles, total: regions + naval + battles };
