@@ -353,9 +353,14 @@ function updateIntelligence(state) {
     const visible  = new Set();
 
     // 1. Regions your armies occupy and their immediate neighbours
+    // Sea-crossing adjacencies are only visible if this side holds naval control or it is contested.
+    const hasNaval = state.sides[side].naval_control || state.naval_contested;
     myArmies.forEach(a => {
       visible.add(a.true_region);
-      (state.adjacency[a.true_region] || []).forEach(r => visible.add(r));
+      (state.adjacency[a.true_region] || []).forEach(r => {
+        if (SEA_CONNECTIONS.has(`${a.true_region}:${r}`) && !hasNaval) return;
+        visible.add(r);
+      });
     });
 
     // 2. Regions you control — you have local knowledge of your own territory
@@ -851,6 +856,13 @@ function finalizeTurn(state) {
 
   updateIntelligence(state);
   calculateSupply(state);
+  // Forced sea crossings arrive out of supply regardless of depot coverage
+  state.armies.forEach(army => {
+    if (army.forced_crossing_this_turn) {
+      army.in_supply = false;
+      delete army.forced_crossing_this_turn;
+    }
+  });
   calculateAttrition(state);
 
   // Field experience: track turns in field for Levy armies (Levy→Seasoned promotion at winter)
@@ -897,16 +909,59 @@ function resolveTurn(state) {
     if (order.type !== 'move') return;
     const army = state.armies.find(a => a.army_id === order.army_id);
     if (!army) return;
-    enteredFrom[order.army_id] = army.true_region;
+
+    const fromRegion = army.true_region;
+    const routeKey   = `${fromRegion}:${order.to_region}`;
+    const isForced   = SEA_CONNECTIONS.has(routeKey) &&
+                       !state.sides[army.side].naval_control &&
+                       !state.naval_contested;
+
+    if (isForced) {
+      // Deduct 1 IP for the crossing attempt regardless of outcome
+      state.sides[army.side].initiative_pool = Math.max(0, state.sides[army.side].initiative_pool - 1);
+      const roll    = Math.floor(Math.random() * 6) + 1;
+      const success = roll >= 4;
+      // Naval controller (always the opponent when forced crossing is possible) sees the attempt
+      const navalController = state.sides.rome.naval_control    ? 'rome'
+                            : state.sides.carthage.naval_control ? 'carthage'
+                            : null;
+      if (navalController) {
+        const intel = (state.intelligence[navalController]?.enemy_armies || [])
+          .find(e => e.army_id === army.army_id);
+        if (intel) {
+          intel.last_known_region = fromRegion;
+          intel.last_known_turn   = state.campaign.current_season_turn;
+        }
+      }
+      state.log.push({
+        turn:       state.campaign.current_season_turn,
+        year:       state.campaign.current_year,
+        type:       'forced_sea_crossing',
+        side:       army.side,
+        army_id:    army.army_id,
+        from:       fromRegion,
+        to:         order.to_region,
+        roll,
+        success,
+        visible_to: navalController ? 'both' : army.side,
+      });
+      if (!success) return; // Failed — army stays, initiative already spent
+      army.forced_crossing_this_turn = true; // supply overridden after calculateSupply
+    }
+
+    enteredFrom[order.army_id] = fromRegion;
     army.true_region = order.to_region;
-    state.log.push({
-      turn:    state.campaign.current_season_turn,
-      year:    state.campaign.current_year,
-      type:    'move',
-      army_id: order.army_id,
-      from:    enteredFrom[order.army_id],
-      to:      order.to_region,
-    });
+
+    if (!isForced) {
+      state.log.push({
+        turn:    state.campaign.current_season_turn,
+        year:    state.campaign.current_year,
+        type:    'move',
+        army_id: order.army_id,
+        from:    fromRegion,
+        to:      order.to_region,
+      });
+    }
   });
 
   // If any Carthage army moved into a destabilized region, trigger loyalty roll on entry
@@ -1193,11 +1248,8 @@ app.post('/orders', (req, res) => {
       if (!adjacent.includes(order.to_region)) {
         errors.push(`${order.army_id}: ${order.to_region} is not adjacent to ${army.true_region}`);
       }
-      // Naval control check: sea routes require the moving side to hold naval control
-      const routeKey = `${army.true_region}:${order.to_region}`;
-      if (SEA_CONNECTIONS.has(routeKey) && !state.sides[player].naval_control && !state.naval_contested) {
-        errors.push(`${order.army_id}: sea route to ${order.to_region} requires naval control`);
-      }
+      // Sea routes without naval control are allowed as forced crossings (1 IP, roll 4+ to succeed)
+      // No validation error — resolved probabilistically during resolveTurn
       // ZOC: armies in shared occupation cannot move to the opponent's entry region
       const opp = player === 'rome' ? 'carthage' : 'rome';
       const so = (state.shared_occupations || []).find(s =>
@@ -1425,9 +1477,21 @@ app.post('/force-refuse/declare', (req, res) => {
     const bothRefuse    = romeChoice === 'refuse' && carthChoice === 'refuse';
 
     if (someoneForced || bothAccept) {
-      // Battle
+      // Battle — determine primary (strongest) and secondary (support) per side
+      const condScore = { good: 3, worn: 2, depleted: 1, broken: 0 };
+      const expScore  = { elite: 4, veteran: 3, seasoned: 2, levy: 1 };
+      const armyRank  = a => (condScore[a.condition] ?? 0) * 5 + (expScore[a.experience] ?? 0);
+      const primary   = {};
+      const secondary = {};
+      ['rome', 'carthage'].forEach(side => {
+        const sorted = (enc[side]?.army_ids || [])
+          .map(id => state.armies.find(a => a.army_id === id)).filter(Boolean)
+          .sort((a, b) => armyRank(b) - armyRank(a));
+        primary[side]   = sorted[0]?.army_id ?? null;
+        secondary[side] = sorted.slice(1).map(a => a.army_id);
+      });
       const armyIds = [...(enc.rome?.army_ids || []), ...(enc.carthage?.army_ids || [])];
-      state.pending_battles.push({ turn, region: enc.region, armies: armyIds });
+      state.pending_battles.push({ turn, region: enc.region, armies: armyIds, primary, secondary });
       state.log.push({ turn, year: state.campaign.current_year, type: 'battle_triggered', region: enc.region, armies: armyIds });
       state.shared_occupations = state.shared_occupations.filter(so => so.region !== enc.region);
 
@@ -1564,7 +1628,7 @@ app.post('/battle/resolve', (req, res) => {
   const player = playerFromToken(state, req);
   if (!player) return res.status(401).json({ error: 'Missing or invalid player token' });
 
-  const { region, winner, loss_type, loser_retreats_to } = req.body;
+  const { region, winner, loss_type, loser_retreats_to, secondary_holds } = req.body;
 
   if (!['rome', 'carthage'].includes(winner)) {
     return res.status(400).json({ error: 'winner must be rome or carthage' });
@@ -1578,60 +1642,67 @@ app.post('/battle/resolve', (req, res) => {
 
   const loser = winner === 'rome' ? 'carthage' : 'rome';
 
-  // Update loser army condition (calculated from supply attrition + battle pts) and retreat
+  // Update loser army condition (calculated from supply attrition + battle pts) and retreat.
+  // Only the primary loser army takes condition damage; secondary armies retreat or hold.
+  const primaryLoserId   = battle.primary?.[loser] ?? null;
+  const secondaryLoserIds = new Set(battle.secondary?.[loser] ?? []);
   const loserArmies = state.armies.filter(a => a.side === loser && battle.armies.includes(a.army_id));
   const winnerOccupied = new Set(state.armies.filter(a => a.side === winner).map(a => a.true_region));
 
   const destroyedIds = new Set();
+  let primaryRetreatTo = null; // resolved during primary processing; reused for secondary
 
   loserArmies.forEach(army => {
-    const condBefore = army.condition;
     const turn = state.campaign.current_season_turn;
+    const isPrimary = !primaryLoserId || army.army_id === primaryLoserId;
 
-    // Trigger 1: army was already Broken entering this battle → destroyed on loss
-    if (condBefore === 'broken') {
-      destroyedIds.add(army.army_id);
-      state.log.push({ turn, year: state.campaign.current_year, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'broken_in_battle', region, visible_to: 'both' });
-      return;
-    }
+    if (isPrimary) {
+      const condBefore = army.condition;
 
-    // Battle always adds +1 attrition pt on top of supply attrition already applied this turn.
-    // Decisive loss also applies a direct condition drop (in addition to threshold drops).
-    const baseAttrPts = army.attrition_pts_this_turn || 0;
-    const newPts = baseAttrPts + 1;
-    const additionalDrops = attritionDrops(newPts) - attritionDrops(baseAttrPts);
+      // Trigger 1: army was already Broken entering this battle → destroyed on loss
+      if (condBefore === 'broken') {
+        destroyedIds.add(army.army_id);
+        state.log.push({ turn, year: state.campaign.current_year, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'broken_in_battle', region, visible_to: 'both' });
+        return;
+      }
 
-    for (let i = 0; i < additionalDrops; i++) army.condition = dropCondition(army.condition);
-    if (loss_type === 'decisive') army.condition = dropCondition(army.condition);
+      // Battle adds +1 attrition pt on top of supply attrition already applied this turn.
+      // Decisive loss also applies a direct condition drop.
+      const baseAttrPts    = army.attrition_pts_this_turn || 0;
+      const newPts         = baseAttrPts + 1;
+      const additionalDrops = attritionDrops(newPts) - attritionDrops(baseAttrPts);
+      for (let i = 0; i < additionalDrops; i++) army.condition = dropCondition(army.condition);
+      if (loss_type === 'decisive') army.condition = dropCondition(army.condition);
 
-    state.log.push({
-      turn,
-      year:            state.campaign.current_year,
-      type:            'battle_attrition',
-      side:            loser,
-      army_id:         army.army_id,
-      loss_type,
-      condition_before: condBefore,
-      condition_after:  army.condition,
-      visible_to:      'both',
-    });
+      state.log.push({
+        turn, year: state.campaign.current_year, type: 'battle_attrition', side: loser,
+        army_id: army.army_id, loss_type,
+        condition_before: condBefore, condition_after: army.condition, visible_to: 'both',
+      });
 
-    const from = army.true_region;
+      const from = army.true_region;
+      primaryRetreatTo = loser_retreats_to || null;
+      if (!primaryRetreatTo) {
+        const adjacent = state.adjacency[region] || [];
+        primaryRetreatTo = adjacent.find(r => !winnerOccupied.has(r)) || null;
+      }
 
-    let retreatTo = loser_retreats_to || null;
-    if (!retreatTo) {
-      // Auto: first adjacent region not currently occupied by winner armies
-      const adjacent = state.adjacency[region] || [];
-      retreatTo = adjacent.find(r => !winnerOccupied.has(r)) || null;
-    }
-
-    if (retreatTo && retreatTo !== region) {
-      army.true_region = retreatTo;
-      state.log.push({ turn, year: state.campaign.current_year, type: 'retreat', army_id: army.army_id, from, to: retreatTo });
+      if (primaryRetreatTo && primaryRetreatTo !== region) {
+        army.true_region = primaryRetreatTo;
+        state.log.push({ turn, year: state.campaign.current_year, type: 'retreat', army_id: army.army_id, from, to: primaryRetreatTo });
+      } else {
+        destroyedIds.add(army.army_id);
+        state.log.push({ turn, year: state.campaign.current_year, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'encircled', region, visible_to: 'both' });
+      }
     } else {
-      // Trigger 2: no valid retreat → encircled and destroyed
-      destroyedIds.add(army.army_id);
-      state.log.push({ turn, year: state.campaign.current_year, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'encircled', region, visible_to: 'both' });
+      // Secondary loser army — no condition damage; retreats with primary or holds in place
+      const from = army.true_region;
+      if (!secondary_holds && primaryRetreatTo && primaryRetreatTo !== region) {
+        army.true_region = primaryRetreatTo;
+        state.log.push({ turn, year: state.campaign.current_year, type: 'retreat', army_id: army.army_id, from, to: primaryRetreatTo, reason: 'secondary_with_primary', visible_to: 'both' });
+      } else {
+        state.log.push({ turn, year: state.campaign.current_year, type: 'secondary_holds', army_id: army.army_id, region, visible_to: 'both' });
+      }
     }
   });
 

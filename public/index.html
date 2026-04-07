@@ -210,6 +210,13 @@
           <option value="">Auto (nearest safe region)</option>
         </select>
       </div>
+      <div class="battle-field" id="secondary-retreat-field" style="display:none">
+        <label class="battle-label" id="secondary-retreat-label">Secondary army — after battle</label>
+        <select id="battle-secondary-holds">
+          <option value="false">Retreat with primary army</option>
+          <option value="true">Hold in place</option>
+        </select>
+      </div>
     </div>
     <p id="battle-error" class="hidden"></p>
     <button id="battle-submit">Record Result</button>

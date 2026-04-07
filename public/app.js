@@ -561,6 +561,14 @@ function renderOrderSelector(army) {
       return `<option value="move:${r}">${regionName(r)}${isSea ? ' ⚓' : ''}</option>`;
     }).join('');
 
+  // Forced sea crossings — available when we lack naval control; costs 1 IP, roll 4+ to succeed
+  const forcedSeaOpts = !hasNaval
+    ? adjacent
+        .filter(r => SEA_CONNECTIONS.has(`${army.true_region}:${r}`))
+        .map(r => `<option value="move:${r}">⚠ ${regionName(r)} — forced crossing (1 IP, 4+)</option>`)
+        .join('')
+    : '';
+
   // Enemy armies available to scout — identified by is_intelligence flag
   const enemies = gameState.armies.filter(a => a.is_intelligence);
   const scoutOpts = enemies.map(a =>
@@ -608,7 +616,8 @@ function renderOrderSelector(army) {
         ${deepOpts    ? `<optgroup label="── Deep Scout">${deepOpts}</optgroup>`    : ''}
         ${depotOpt    ? `<optgroup label="── Supply">${depotOpt}</optgroup>`        : ''}
         ${siegeOpts   ? `<optgroup label="── Siege">${siegeOpts}</optgroup>`        : ''}
-        ${feintOpts   ? `<optgroup label="── Feint">${feintOpts}</optgroup>`        : ''}
+        ${feintOpts      ? `<optgroup label="── Feint">${feintOpts}</optgroup>`           : ''}
+        ${forcedSeaOpts ? `<optgroup label="── Forced Sea Crossing">${forcedSeaOpts}</optgroup>` : ''}
       </select>
     </div>`;
 }
@@ -616,8 +625,20 @@ function renderOrderSelector(army) {
 // Returns total initiative points committed by pending orders this turn
 function getCommittedInitiative() {
   const costs = { hold: 0, move: 0, scout: 1, deep_scout: 2, establish_depot: 1, siege: 1, feint: 1 };
-  return Object.values(pendingOrders)
-    .reduce((sum, o) => sum + (costs[o.type] || 0), 0);
+  return Object.values(pendingOrders).reduce((sum, o) => {
+    let cost = costs[o.type] || 0;
+    // Forced sea crossing costs 1 IP (sea route without naval control)
+    if (o.type === 'move' && o.to_region) {
+      const army = gameState.armies?.find(a => a.army_id === o.army_id);
+      if (army) {
+        const routeKey = `${army.true_region}:${o.to_region}`;
+        if (SEA_CONNECTIONS.has(routeKey) && !gameState.sides[mySide]?.naval_control && !gameState.naval_contested) {
+          cost = 1;
+        }
+      }
+    }
+    return sum + cost;
+  }, 0);
 }
 
 // Updates only the initiative pool spans — called on render and live on order changes
@@ -740,20 +761,37 @@ function showBattleModal(battle, total) {
     .map(id => gameState.armies.find(a => a.army_id === id))
     .filter(Boolean);
 
-  // Show both army names — both sides know who they fought
-  const armyHtml = armies.map(a =>
-    `<span class="side-${a.side}">${a.name}</span>`
-  ).join(' <span style="color:var(--text-dim)">vs</span> ');
+  // Build per-side army display showing primary/secondary roles and effective points
+  function sideArmyHtml(side) {
+    const sideArmies = armies.filter(a => a.side === side);
+    if (sideArmies.length === 0) return '';
+    return sideArmies.map(a => {
+      const isPrimary   = !battle.primary?.[side] || a.army_id === battle.primary[side];
+      const hasSupport  = (battle.secondary?.[side] ?? []).length > 0 && isPrimary;
+      const basePts     = a.points_budget ?? 0;
+      const effectivePts = hasSupport ? Math.round(basePts * 1.1) : basePts;
+      const roleLabel   = isPrimary
+        ? (sideArmies.length > 1 ? ' <span style="color:#f39c12;font-size:11px">[PRIMARY]</span>' : '')
+        : ' <span style="color:#aaa;font-size:11px">[SUPPORT +10%]</span>';
+      const ptsLabel    = `<span style="color:var(--text-dim);font-size:12px"> ${effectivePts} pts${hasSupport ? ' (+10%)' : ''}</span>`;
+      return `<div><span class="side-${side}">${a.name}</span>${roleLabel}${ptsLabel}</div>`;
+    }).join('');
+  }
 
   body.innerHTML = `
     <div class="battle-region">${region?.name ?? battle.region}</div>
-    <div class="battle-armies">${armyHtml}</div>
+    <div class="battle-armies" style="display:flex;gap:24px;justify-content:center;text-align:left">
+      <div>${sideArmyHtml('rome')}</div>
+      <div style="color:var(--text-dim);align-self:center">vs</div>
+      <div>${sideArmyHtml('carthage')}</div>
+    </div>
     <div class="battle-note">Fight this battle in Field of Glory 2, then record the result below.</div>`;
 
   // Retreat options — adjacent regions the loser could fall back to, excluding enemy-occupied ones.
   // Rebuilt whenever the winner selection changes since occupied regions depend on who won.
   function buildRetreatOptions() {
     const winner = document.getElementById('battle-winner').value;
+    const loser  = winner === 'rome' ? 'carthage' : 'rome';
     const winnerOccupied = new Set(
       (gameState.armies || [])
         .filter(a => a.side === winner && a.true_region)
@@ -767,8 +805,19 @@ function showBattleModal(battle, total) {
         retreatSel.innerHTML += `<option value="${r}">${regionName(r)}</option>`;
       }
     });
-    // Restore selection if still valid
     if (prev && retreatSel.querySelector(`option[value="${prev}"]`)) retreatSel.value = prev;
+
+    // Show secondary disposition if loser has a secondary army
+    const secondaryField = document.getElementById('secondary-retreat-field');
+    const loserSecondary = battle.secondary?.[loser] ?? [];
+    if (loserSecondary.length > 0) {
+      const secArmy = gameState.armies.find(a => a.army_id === loserSecondary[0]);
+      document.getElementById('secondary-retreat-label').textContent =
+        `${secArmy?.name ?? 'Secondary army'} — after battle`;
+      secondaryField.style.display = '';
+    } else {
+      secondaryField.style.display = 'none';
+    }
   }
   document.getElementById('battle-winner').addEventListener('change', buildRetreatOptions);
   buildRetreatOptions();
@@ -786,6 +835,10 @@ async function submitBattleResult() {
 
   const body = { region: currentBattleRegion, winner, loss_type };
   if (retreatVal) body.loser_retreats_to = retreatVal;
+  const secHoldsEl = document.getElementById('battle-secondary-holds');
+  if (secHoldsEl && document.getElementById('secondary-retreat-field').style.display !== 'none') {
+    body.secondary_holds = secHoldsEl.value === 'true';
+  }
 
   try {
     const res = await fetch('/battle/resolve', {
@@ -978,6 +1031,10 @@ function showResolutionSummary(resolvedTurn, state) {
 
   let html = '';
 
+  // ── Forced sea crossing results ──
+  const myForcedCrossings = logEvents.filter(e => e.type === 'forced_sea_crossing' && e.side === mySide);
+  const enemyForcedCrossings = logEvents.filter(e => e.type === 'forced_sea_crossing' && e.side !== mySide);
+
   // Section: Your Orders
   html += '<div class="res-section-title">Your Orders</div>';
   if (myMoves.length) {
@@ -987,6 +1044,16 @@ function showResolutionSummary(resolvedTurn, state) {
     }).join('');
   } else {
     html += '<div class="res-item res-dim">All armies held position.</div>';
+  }
+
+  // Forced sea crossing outcomes (own)
+  if (myForcedCrossings.length) {
+    html += myForcedCrossings.map(e => {
+      const army = state.armies.find(a => a.army_id === e.army_id);
+      return e.success
+        ? `<div class="res-item res-warn">⚓ ${army?.name ?? e.army_id}: forced crossing to ${regionName(e.to)} succeeded (rolled ${e.roll}) — arrives out of supply</div>`
+        : `<div class="res-item res-warn">⚓ ${army?.name ?? e.army_id}: forced crossing to ${regionName(e.to)} failed (rolled ${e.roll}) — army holds in ${regionName(e.from)}, 1 IP lost</div>`;
+    }).join('');
   }
 
   // Section: Scout action results (private — server already filtered log to only include own)
@@ -1011,6 +1078,15 @@ function showResolutionSummary(resolvedTurn, state) {
           No confirmed sighting of ${targetArmy?.name ?? e.target_army}
         </div>`;
       }
+    }).join('');
+  }
+
+  // Forced sea crossings detected by naval controller (enemy attempts)
+  if (enemyForcedCrossings.length) {
+    html += '<div class="res-section-title">Naval Intelligence</div>';
+    html += enemyForcedCrossings.map(e => {
+      const outcome = e.success ? `crossed to ${regionName(e.to)}` : `repulsed — held in ${regionName(e.from)}`;
+      return `<div class="res-item res-intel">⚓ Enemy forced crossing attempt: ${regionName(e.from)} → ${regionName(e.to)} (rolled ${e.roll}) — ${outcome}</div>`;
     }).join('');
   }
 
