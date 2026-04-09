@@ -50,7 +50,13 @@
       "Bash(curl -s http://localhost:3000/ -o /dev/null -w \"%{http_code}\")",
       "Bash(node bellum_sim.js --runs 20)",
       "Bash(del \"C:\\\\Users\\\\mgavi\\\\OneDrive\\\\Documents\\\\Bellum punicum\\\\game-state.json\")",
-      "Bash(node --check server.js)"
+      "Bash(node --check server.js)",
+      "Bash(node -e \"require\\(''docx''\\); console.log\\(''docx ok''\\)\")",
+      "Bash(node -e \"require\\(''docx''\\); console.log\\(''ok''\\)\")",
+      "Bash(npm list:*)",
+      "Bash(node -e \"const docx = require\\(require\\(''path''\\).join\\(require\\(''os''\\).homedir\\(\\), ''AppData/Roaming/npm/node_modules/docx''\\)\\); console.log\\(''ok''\\)\")",
+      "Bash(node make-rules.js)",
+      "Bash(node make-reference.js)"
     ]
   }
 }

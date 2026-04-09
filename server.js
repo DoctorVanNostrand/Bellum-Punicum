@@ -1681,15 +1681,26 @@ app.post('/battle/resolve', (req, res) => {
       });
 
       const from = army.true_region;
-      primaryRetreatTo = loser_retreats_to || null;
-      if (!primaryRetreatTo) {
-        const adjacent = state.adjacency[region] || [];
-        primaryRetreatTo = adjacent.find(r => !winnerOccupied.has(r)) || null;
-      }
+      const loserHasNaval = state.sides[loser].naval_control || state.naval_contested;
+      const allAdjacent   = state.adjacency[region] || [];
+      // Filter retreat candidates: exclude sea lanes if loser lacks naval access
+      const retreatCandidates = allAdjacent.filter(r => {
+        if (SEA_CONNECTIONS.has(`${region}:${r}`) && !loserHasNaval) return false;
+        return !winnerOccupied.has(r);
+      });
+      primaryRetreatTo = loser_retreats_to || retreatCandidates[0] || null;
+      // Detect island stranding: all adjacencies require sea crossing loser can't use
+      const islandStranded = !primaryRetreatTo &&
+        allAdjacent.length > 0 &&
+        allAdjacent.every(r => SEA_CONNECTIONS.has(`${region}:${r}`)) &&
+        !loserHasNaval;
 
       if (primaryRetreatTo && primaryRetreatTo !== region) {
         army.true_region = primaryRetreatTo;
-        state.log.push({ turn, year: state.campaign.current_year, type: 'retreat', army_id: army.army_id, from, to: primaryRetreatTo });
+        state.log.push({ turn, year: state.campaign.current_year, type: 'retreat', army_id: army.army_id, from, to: primaryRetreatTo, visible_to: 'both' });
+      } else if (islandStranded) {
+        // Army holds on the island — no sea access to retreat; combat triggers next turn
+        state.log.push({ turn, year: state.campaign.current_year, type: 'holds_island', army_id: army.army_id, region, side: loser, visible_to: 'both' });
       } else {
         destroyedIds.add(army.army_id);
         state.log.push({ turn, year: state.campaign.current_year, type: 'army_destroyed', army_id: army.army_id, army_name: army.name, side: loser, reason: 'encircled', region, visible_to: 'both' });

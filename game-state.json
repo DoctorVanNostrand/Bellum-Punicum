@@ -2,7 +2,7 @@
   "naval_contested": false,
   "campaign": {
     "campaign_id": "218bc",
-    "current_year": 1,
+    "current_year": 2,
     "current_season_turn": 1,
     "phase": "orders",
     "active_player": "both",
@@ -54,7 +54,7 @@
       "region_id": "pyrenean_passes",
       "name": "Pyrenean Passes",
       "theater": "gaul",
-      "controller": "neutral",
+      "controller": "carthage",
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": []
@@ -63,7 +63,7 @@
       "region_id": "transalpine_gaul",
       "name": "Transalpine Gaul",
       "theater": "gaul",
-      "controller": "neutral",
+      "controller": "rome",
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": []
@@ -72,7 +72,7 @@
       "region_id": "alpine_passes",
       "name": "Alpine Passes",
       "theater": "gaul",
-      "controller": "neutral",
+      "controller": "rome",
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": []
@@ -81,7 +81,7 @@
       "region_id": "cisalpine_gaul",
       "name": "Cisalpine Gaul",
       "theater": "italia",
-      "controller": "neutral",
+      "controller": "carthage",
       "loyalty_rating": 3,
       "defected": false,
       "strategic_points": [
@@ -89,13 +89,14 @@
           "point_id": "mediolanum",
           "name": "Mediolanum",
           "fortification_rating": 2,
-          "controller": "neutral",
+          "controller": "carthage",
           "under_siege": false,
           "besieging_army_id": null,
           "breach_points_accumulated": 0,
           "siege_equipment_present": false
         }
-      ]
+      ],
+      "carthage_turns_present": 2
     },
     {
       "region_id": "venetia",
@@ -231,7 +232,7 @@
       "region_id": "sardinia_corsica",
       "name": "Sardinia & Corsica",
       "theater": "island",
-      "controller": "rome",
+      "controller": "carthage",
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": []
@@ -240,7 +241,7 @@
       "region_id": "sicily",
       "name": "Sicily",
       "theater": "island",
-      "controller": "neutral",
+      "controller": "carthage",
       "loyalty_rating": null,
       "defected": false,
       "strategic_points": [
@@ -248,7 +249,7 @@
           "point_id": "syracuse",
           "name": "Syracuse",
           "fortification_rating": 2,
-          "controller": "neutral",
+          "controller": "carthage",
           "under_siege": false,
           "besieging_army_id": null,
           "breach_points_accumulated": 0,
@@ -300,7 +301,7 @@
       "army_id": "hannibal",
       "side": "carthage",
       "name": "Hannibal",
-      "true_region": "hispania_citerior",
+      "true_region": "cisalpine_gaul",
       "composition_profile": "combined_arms",
       "condition": "good",
       "experience": "veteran",
@@ -309,19 +310,20 @@
       "communication_delayed": false,
       "pending_order": null,
       "mercenary_contingent_attached": false,
-      "allied_contingent_attached": false,
+      "allied_contingent_attached": true,
       "emergency_reinforcement": false,
-      "siege_equipment": false,
-      "season_start_region": null,
+      "siege_equipment": true,
+      "season_start_region": "cisalpine_gaul",
       "turns_in_field": 0,
       "feint_region": null,
-      "feint_expires_turn": null
+      "feint_expires_turn": null,
+      "attrition_pts_this_turn": 0
     },
     {
       "army_id": "hasdrubal",
       "side": "carthage",
       "name": "Hasdrubal",
-      "true_region": "hispania_ulterior",
+      "true_region": "africa_proper",
       "composition_profile": "heavy_infantry",
       "condition": "good",
       "experience": "seasoned",
@@ -333,16 +335,39 @@
       "allied_contingent_attached": false,
       "emergency_reinforcement": false,
       "siege_equipment": false,
-      "season_start_region": null,
+      "season_start_region": "africa_proper",
       "turns_in_field": 0,
       "feint_region": null,
-      "feint_expires_turn": null
+      "feint_expires_turn": null,
+      "attrition_pts_this_turn": 0
     },
     {
       "army_id": "consular",
       "side": "rome",
       "name": "Consular Army",
-      "true_region": "cisalpine_gaul",
+      "true_region": "liguria",
+      "composition_profile": "heavy_infantry",
+      "condition": "good",
+      "experience": "seasoned",
+      "points_budget": 1200,
+      "in_supply": true,
+      "communication_delayed": false,
+      "pending_order": null,
+      "mercenary_contingent_attached": false,
+      "allied_contingent_attached": true,
+      "emergency_reinforcement": false,
+      "siege_equipment": false,
+      "season_start_region": "liguria",
+      "turns_in_field": 0,
+      "feint_region": null,
+      "feint_expires_turn": null,
+      "attrition_pts_this_turn": 0
+    },
+    {
+      "army_id": "reserve",
+      "side": "rome",
+      "name": "Reserve Army",
+      "true_region": "bruttium_calabria",
       "composition_profile": "heavy_infantry",
       "condition": "good",
       "experience": "seasoned",
@@ -354,54 +379,34 @@
       "allied_contingent_attached": false,
       "emergency_reinforcement": false,
       "siege_equipment": false,
-      "season_start_region": null,
+      "season_start_region": "bruttium_calabria",
       "turns_in_field": 0,
       "feint_region": null,
-      "feint_expires_turn": null
-    },
-    {
-      "army_id": "reserve",
-      "side": "rome",
-      "name": "Reserve Army",
-      "true_region": "latium",
-      "composition_profile": "heavy_infantry",
-      "condition": "good",
-      "experience": "levy",
-      "points_budget": 1200,
-      "in_supply": true,
-      "communication_delayed": false,
-      "pending_order": null,
-      "mercenary_contingent_attached": false,
-      "allied_contingent_attached": false,
-      "emergency_reinforcement": false,
-      "siege_equipment": false,
-      "season_start_region": null,
-      "turns_in_field": 0,
-      "feint_region": null,
-      "feint_expires_turn": null
+      "feint_expires_turn": null,
+      "attrition_pts_this_turn": 0
     }
   ],
   "sides": {
     "rome": {
       "side": "rome",
-      "resources": 2,
-      "banked_resources": 0,
+      "resources": 1,
+      "banked_resources": 1,
       "initiative_pool": 4,
       "naval_control": false,
       "naval_investment_this_winter": 0,
-      "vp_total": 0,
+      "vp_total": 14,
       "reinforcement_used_this_season": false,
       "emergency_reinforcement_used_this_season": false,
       "season_battle_wins": 0
     },
     "carthage": {
       "side": "carthage",
-      "resources": 2,
-      "banked_resources": 0,
+      "resources": 1,
+      "banked_resources": 1,
       "initiative_pool": 4,
       "naval_control": true,
       "naval_investment_this_winter": 0,
-      "vp_total": 0,
+      "vp_total": 15,
       "reinforcement_used_this_season": false,
       "emergency_reinforcement_used_this_season": false,
       "season_battle_wins": 0
@@ -413,40 +418,52 @@
       "enemy_armies": [
         {
           "army_id": "hannibal",
-          "last_known_region": "hispania_citerior",
-          "last_known_turn": 1,
-          "condition_known": false,
-          "known_condition": null
-        },
-        {
-          "army_id": "hasdrubal",
-          "last_known_region": "hispania_ulterior",
-          "last_known_turn": 1,
-          "condition_known": false,
-          "known_condition": null
-        }
-      ],
-      "enemy_depots": []
-    },
-    "carthage": {
-      "side": "carthage",
-      "enemy_armies": [
-        {
-          "army_id": "consular",
           "last_known_region": "cisalpine_gaul",
           "last_known_turn": 1,
           "condition_known": false,
           "known_condition": null
         },
         {
-          "army_id": "reserve",
-          "last_known_region": "latium",
+          "army_id": "hasdrubal",
+          "last_known_region": "africa_proper",
           "last_known_turn": 1,
           "condition_known": false,
           "known_condition": null
         }
       ],
-      "enemy_depots": []
+      "enemy_depots": [
+        {
+          "depot_id": "depot_1775709146106_hannibal",
+          "region_id": "cisalpine_gaul",
+          "discovered_turn": 9
+        }
+      ]
+    },
+    "carthage": {
+      "side": "carthage",
+      "enemy_armies": [
+        {
+          "army_id": "consular",
+          "last_known_region": "liguria",
+          "last_known_turn": 1,
+          "condition_known": false,
+          "known_condition": null
+        },
+        {
+          "army_id": "reserve",
+          "last_known_region": "bruttium_calabria",
+          "last_known_turn": 1,
+          "condition_known": false,
+          "known_condition": null
+        }
+      ],
+      "enemy_depots": [
+        {
+          "depot_id": "depot_1775709066553_reserve",
+          "region_id": "bruttium_calabria",
+          "discovered_turn": 8
+        }
+      ]
     }
   },
   "log": [
@@ -458,11 +475,580 @@
       "threshold": 3,
       "secured": false,
       "visible_to": "both"
+    },
+    {
+      "turn": 1,
+      "year": 1,
+      "type": "move",
+      "army_id": "consular",
+      "from": "cisalpine_gaul",
+      "to": "liguria"
+    },
+    {
+      "turn": 1,
+      "year": 1,
+      "type": "move",
+      "army_id": "reserve",
+      "from": "latium",
+      "to": "etruria"
+    },
+    {
+      "turn": 1,
+      "year": 1,
+      "type": "move",
+      "army_id": "hasdrubal",
+      "from": "hispania_ulterior",
+      "to": "numidia_west"
+    },
+    {
+      "turn": 1,
+      "year": 1,
+      "type": "move",
+      "army_id": "hannibal",
+      "from": "hispania_citerior",
+      "to": "pyrenean_passes"
+    },
+    {
+      "turn": 1,
+      "year": 1,
+      "type": "occupation",
+      "region": "pyrenean_passes",
+      "side": "carthage",
+      "prev_controller": "neutral",
+      "visible_to": "both"
+    },
+    {
+      "turn": 2,
+      "year": 1,
+      "type": "move",
+      "army_id": "reserve",
+      "from": "etruria",
+      "to": "umbria_picenum"
+    },
+    {
+      "turn": 2,
+      "year": 1,
+      "type": "move",
+      "army_id": "hannibal",
+      "from": "pyrenean_passes",
+      "to": "transalpine_gaul"
+    },
+    {
+      "turn": 2,
+      "year": 1,
+      "type": "move",
+      "army_id": "hasdrubal",
+      "from": "numidia_west",
+      "to": "sardinia_corsica"
+    },
+    {
+      "turn": 2,
+      "year": 1,
+      "type": "occupation",
+      "region": "transalpine_gaul",
+      "side": "carthage",
+      "prev_controller": "neutral",
+      "visible_to": "both"
+    },
+    {
+      "turn": 2,
+      "year": 1,
+      "type": "occupation",
+      "region": "sardinia_corsica",
+      "side": "carthage",
+      "prev_controller": "rome",
+      "visible_to": "both"
+    },
+    {
+      "turn": 2,
+      "year": 1,
+      "type": "depot_established",
+      "side": "rome",
+      "region_id": "liguria",
+      "army_id": "consular",
+      "visible_to": "rome"
+    },
+    {
+      "turn": 2,
+      "year": 1,
+      "type": "attrition",
+      "side": "carthage",
+      "army_id": "hasdrubal",
+      "points": 1,
+      "condition_before": "good",
+      "condition_after": "good",
+      "in_supply": false,
+      "region_controller": "carthage",
+      "visible_to": "both"
+    },
+    {
+      "turn": 3,
+      "year": 1,
+      "type": "move",
+      "army_id": "reserve",
+      "from": "umbria_picenum",
+      "to": "samnium_lucania"
+    },
+    {
+      "turn": 3,
+      "year": 1,
+      "type": "move",
+      "army_id": "hasdrubal",
+      "from": "sardinia_corsica",
+      "to": "numidia_west"
+    },
+    {
+      "turn": 3,
+      "year": 1,
+      "type": "depot_established",
+      "side": "carthage",
+      "region_id": "transalpine_gaul",
+      "army_id": "hannibal",
+      "visible_to": "carthage"
+    },
+    {
+      "turn": 4,
+      "year": 1,
+      "type": "move",
+      "army_id": "reserve",
+      "from": "samnium_lucania",
+      "to": "bruttium_calabria"
+    },
+    {
+      "turn": 4,
+      "year": 1,
+      "type": "move",
+      "army_id": "hasdrubal",
+      "from": "numidia_west",
+      "to": "numidia_east"
+    },
+    {
+      "turn": 4,
+      "year": 1,
+      "type": "move",
+      "army_id": "hannibal",
+      "from": "transalpine_gaul",
+      "to": "liguria"
+    },
+    {
+      "turn": 4,
+      "year": 1,
+      "type": "force_refuse_resolved",
+      "region": "liguria",
+      "rome_choice": "refuse",
+      "carthage_choice": "accept",
+      "visible_to": "both"
+    },
+    {
+      "turn": 4,
+      "year": 1,
+      "type": "retreat",
+      "army_id": "consular",
+      "from": "liguria",
+      "to": "cisalpine_gaul",
+      "reason": "refused_battle",
+      "visible_to": "both"
+    },
+    {
+      "turn": 4,
+      "year": 1,
+      "type": "depot_destroyed",
+      "side": "rome",
+      "region_id": "liguria",
+      "visible_to": "both"
+    },
+    {
+      "turn": 4,
+      "year": 1,
+      "type": "attrition",
+      "side": "carthage",
+      "army_id": "hannibal",
+      "points": 1,
+      "condition_before": "good",
+      "condition_after": "good",
+      "in_supply": true,
+      "region_controller": "rome",
+      "visible_to": "both"
+    },
+    {
+      "turn": 5,
+      "year": 1,
+      "type": "move",
+      "army_id": "consular",
+      "from": "cisalpine_gaul",
+      "to": "alpine_passes"
+    },
+    {
+      "turn": 5,
+      "year": 1,
+      "type": "forced_sea_crossing",
+      "side": "rome",
+      "army_id": "reserve",
+      "from": "bruttium_calabria",
+      "to": "sicily",
+      "roll": 3,
+      "success": false,
+      "visible_to": "both"
+    },
+    {
+      "turn": 5,
+      "year": 1,
+      "type": "move",
+      "army_id": "hasdrubal",
+      "from": "numidia_east",
+      "to": "sicily"
+    },
+    {
+      "turn": 5,
+      "year": 1,
+      "type": "move",
+      "army_id": "hannibal",
+      "from": "liguria",
+      "to": "cisalpine_gaul"
+    },
+    {
+      "turn": 5,
+      "year": 1,
+      "type": "occupation",
+      "region": "alpine_passes",
+      "side": "rome",
+      "prev_controller": "neutral",
+      "visible_to": "both"
+    },
+    {
+      "turn": 5,
+      "year": 1,
+      "type": "occupation",
+      "region": "cisalpine_gaul",
+      "side": "carthage",
+      "prev_controller": "neutral",
+      "visible_to": "both"
+    },
+    {
+      "turn": 5,
+      "year": 1,
+      "type": "occupation",
+      "region": "sicily",
+      "side": "carthage",
+      "prev_controller": "neutral",
+      "visible_to": "both"
+    },
+    {
+      "turn": 5,
+      "year": 1,
+      "type": "attrition",
+      "side": "rome",
+      "army_id": "consular",
+      "points": 1,
+      "condition_before": "good",
+      "condition_after": "good",
+      "in_supply": false,
+      "region_controller": "rome",
+      "visible_to": "both"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "move",
+      "army_id": "consular",
+      "from": "alpine_passes",
+      "to": "transalpine_gaul"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "forced_sea_crossing",
+      "side": "rome",
+      "army_id": "reserve",
+      "from": "bruttium_calabria",
+      "to": "sicily",
+      "roll": 6,
+      "success": true,
+      "visible_to": "both"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "move",
+      "army_id": "hasdrubal",
+      "from": "sicily",
+      "to": "numidia_east"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "move",
+      "army_id": "hannibal",
+      "from": "cisalpine_gaul",
+      "to": "liguria"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "occupation",
+      "region": "transalpine_gaul",
+      "side": "rome",
+      "prev_controller": "carthage",
+      "visible_to": "both"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "occupation",
+      "region": "sicily",
+      "side": "rome",
+      "prev_controller": "carthage",
+      "visible_to": "both"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "depot_destroyed",
+      "side": "carthage",
+      "region_id": "transalpine_gaul",
+      "visible_to": "both"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "attrition",
+      "side": "carthage",
+      "army_id": "hannibal",
+      "points": 2,
+      "condition_before": "good",
+      "condition_after": "worn",
+      "in_supply": false,
+      "region_controller": "rome",
+      "visible_to": "both"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "attrition",
+      "side": "rome",
+      "army_id": "consular",
+      "points": 1,
+      "condition_before": "good",
+      "condition_after": "good",
+      "in_supply": false,
+      "region_controller": "rome",
+      "visible_to": "both"
+    },
+    {
+      "turn": 6,
+      "year": 1,
+      "type": "attrition",
+      "side": "rome",
+      "army_id": "reserve",
+      "points": 1,
+      "condition_before": "good",
+      "condition_after": "good",
+      "in_supply": false,
+      "region_controller": "rome",
+      "visible_to": "both"
+    },
+    {
+      "turn": 7,
+      "year": 1,
+      "type": "move",
+      "army_id": "consular",
+      "from": "transalpine_gaul",
+      "to": "liguria"
+    },
+    {
+      "turn": 7,
+      "year": 1,
+      "type": "move",
+      "army_id": "hannibal",
+      "from": "liguria",
+      "to": "cisalpine_gaul"
+    },
+    {
+      "turn": 7,
+      "year": 1,
+      "type": "move",
+      "army_id": "hasdrubal",
+      "from": "numidia_east",
+      "to": "sicily"
+    },
+    {
+      "turn": 7,
+      "year": 1,
+      "type": "force_refuse_resolved",
+      "region": "sicily",
+      "rome_choice": "refuse",
+      "carthage_choice": "accept",
+      "visible_to": "both"
+    },
+    {
+      "turn": 7,
+      "year": 1,
+      "type": "retreat",
+      "army_id": "reserve",
+      "from": "sicily",
+      "to": "bruttium_calabria",
+      "reason": "refused_battle",
+      "visible_to": "both"
+    },
+    {
+      "turn": 7,
+      "year": 1,
+      "type": "depot_established",
+      "side": "rome",
+      "region_id": "bruttium_calabria",
+      "army_id": "reserve",
+      "visible_to": "rome"
+    },
+    {
+      "turn": 7,
+      "year": 1,
+      "type": "attrition",
+      "side": "carthage",
+      "army_id": "hannibal",
+      "points": 1,
+      "condition_before": "worn",
+      "condition_after": "worn",
+      "in_supply": false,
+      "region_controller": "carthage",
+      "visible_to": "both"
+    },
+    {
+      "turn": 8,
+      "year": 1,
+      "type": "move",
+      "army_id": "hasdrubal",
+      "from": "sicily",
+      "to": "africa_proper"
+    },
+    {
+      "turn": 8,
+      "year": 1,
+      "type": "depot_established",
+      "side": "carthage",
+      "region_id": "cisalpine_gaul",
+      "army_id": "hannibal",
+      "visible_to": "carthage"
+    },
+    {
+      "turn": 9,
+      "year": 1,
+      "type": "winter_income",
+      "rome": 3,
+      "carthage": 4,
+      "breakdown": {
+        "rome": {
+          "regions": 3,
+          "naval": 0,
+          "battles": 0,
+          "total": 3
+        },
+        "carthage": {
+          "regions": 3,
+          "naval": 1,
+          "battles": 0,
+          "total": 4
+        }
+      },
+      "visible_to": "both"
+    },
+    {
+      "turn": 9,
+      "year": 1,
+      "type": "winter_naval",
+      "rome": {
+        "bid": 2,
+        "roll": 5,
+        "modifier": 2,
+        "total": 7
+      },
+      "carthage": {
+        "bid": 2,
+        "roll": 6,
+        "modifier": 4,
+        "total": 10
+      },
+      "winner": "carthage",
+      "contested": false,
+      "visible_to": "both"
+    },
+    {
+      "turn": 9,
+      "year": 1,
+      "type": "allied_contingent_attached",
+      "side": "rome",
+      "army_id": "consular",
+      "army_name": "Consular Army",
+      "region": "liguria",
+      "visible_to": "rome"
+    },
+    {
+      "turn": 9,
+      "year": 1,
+      "type": "siege_equipment_purchased",
+      "side": "carthage",
+      "army_id": "hannibal",
+      "army_name": "Hannibal",
+      "visible_to": "carthage"
+    },
+    {
+      "turn": 9,
+      "year": 1,
+      "type": "allied_contingent_attached",
+      "side": "carthage",
+      "army_id": "hannibal",
+      "army_name": "Hannibal",
+      "region": "cisalpine_gaul",
+      "visible_to": "carthage"
+    },
+    {
+      "turn": 9,
+      "year": 1,
+      "type": "experience_gained",
+      "side": "rome",
+      "army_id": "reserve",
+      "army_name": "Reserve Army",
+      "from": "levy",
+      "to": "seasoned",
+      "reason": "field_experience",
+      "visible_to": "both"
+    },
+    {
+      "turn": 9,
+      "year": 1,
+      "type": "vp_snapshot",
+      "side": "rome",
+      "vp_this_season": 14,
+      "vp_total": 14,
+      "breakdown": {
+        "regions": 10,
+        "cities": 4
+      },
+      "visible_to": "both"
+    },
+    {
+      "turn": 9,
+      "year": 1,
+      "type": "vp_snapshot",
+      "side": "carthage",
+      "vp_this_season": 15,
+      "vp_total": 15,
+      "breakdown": {
+        "regions": 10,
+        "cities": 5
+      },
+      "visible_to": "both"
+    },
+    {
+      "turn": 1,
+      "year": 2,
+      "type": "new_season",
+      "previous_year": 1,
+      "visible_to": "both"
     }
   ],
   "sessions": {
-    "rome": null,
-    "carthage": null
+    "rome": "a98ad7a9-44e5-43fa-b452-402878f47e08",
+    "carthage": "8d1d1bd0-1795-49f2-8168-43025118b279"
   },
   "orders": {
     "rome": null,
@@ -484,6 +1070,16 @@
       "depot_id": "depot_start_1",
       "side": "carthage",
       "region_id": "hispania_citerior"
+    },
+    {
+      "depot_id": "depot_1775709066553_reserve",
+      "side": "rome",
+      "region_id": "bruttium_calabria"
+    },
+    {
+      "depot_id": "depot_1775709146106_hannibal",
+      "side": "carthage",
+      "region_id": "cisalpine_gaul"
     }
   ],
   "adjacency": {

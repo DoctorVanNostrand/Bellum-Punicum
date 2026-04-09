@@ -3,7 +3,8 @@
 const TOKEN_KEY    = 'bp_token';
 const SIDE_KEY     = 'bp_side';
 const YEAR_SEEN_KEY = 'bp_year_seen';
-const TURN_SEEN_KEY = 'bp_turn_seen';
+const TURN_SEEN_KEY      = 'bp_turn_seen';
+const WINTER_WARNED_KEY  = 'bp_winter_warned';
 
 // Region centroid coordinates — populated at runtime from the SVG centroid layer
 const REGION_CENTROIDS = {};
@@ -61,6 +62,9 @@ function clearYearSeen()   { ['rome','carthage'].forEach(s => localStorage.remov
 function getTurnSeen()     { return parseInt(localStorage.getItem(`${TURN_SEEN_KEY}_${mySide}`) || '0', 10); }
 function setTurnSeen(turn) { localStorage.setItem(`${TURN_SEEN_KEY}_${mySide}`, turn); }
 function clearTurnSeen()   { ['rome','carthage'].forEach(s => localStorage.removeItem(`${TURN_SEEN_KEY}_${s}`)); }
+
+function getWinterWarned(year) { return localStorage.getItem(`${WINTER_WARNED_KEY}_${mySide}_${year}`) === '1'; }
+function setWinterWarned(year) { localStorage.setItem(`${WINTER_WARNED_KEY}_${mySide}_${year}`, '1'); }
 
 function clearGameNotifications() {
   ['rome', 'carthage'].forEach(s => localStorage.removeItem(`bp_cis_roll_seen_${s}`));
@@ -376,6 +380,21 @@ function render() {
       const battleModal = document.getElementById('battle-modal');
       if (resModal.classList.contains('hidden') && battleModal.classList.contains('hidden')) {
         openNextBattle();
+      }
+    }
+
+    // Turn 8 warning: remind players this is the last turn before winter
+    const turnsPerSeason = gameState.campaign.season_turns_per_year ?? 8;
+    if (phase === 'orders' && currentTurn === turnsPerSeason && !getWinterWarned(currentYear)) {
+      setWinterWarned(currentYear);
+      const resModal = document.getElementById('resolution-modal');
+      const notifyModal = document.getElementById('notify-modal');
+      if (resModal.classList.contains('hidden') && notifyModal.classList.contains('hidden')) {
+        showNotify(
+          '❄ Winter Approaches',
+          `Turn ${turnsPerSeason} of ${currentYear} BC — this is the final campaign turn of the season. ` +
+          `After orders resolve, both sides will enter Winter Quarters.`
+        );
       }
     }
   }
@@ -1643,6 +1662,10 @@ function showWinterRecruitModal() {
 
     myArmies.forEach(army => {
       if (army.condition !== 'good') {
+        // Skip reinforce option if the army will already reach good via natural winter recovery
+        const naturalEnd = predictWinterEnd(army, false);
+        if (!naturalEnd.destroyed && naturalEnd.cond === 'good') return;
+
         anyOptions = true;
         const afterReinforce = stepUp_(army.condition);
         const winterWithR    = predictWinterEnd(army, true);
